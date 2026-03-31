@@ -1,6 +1,6 @@
 # Share Bear
 
-A streamlined Django 6.0 project architecture focused on maintainability and clear separation of concerns.
+A streamlined Django 6.0 project
 
 ## Project Structure
 
@@ -18,30 +18,35 @@ A streamlined Django 6.0 project architecture focused on maintainability and cle
 ## Getting Started
 
 ### Prerequisites
+
 - Python 3.10+
 - `pip`
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone <repository-url>
    cd share-bear
    ```
 
 2. Initialize virtual environment:
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
    ```
 
 3. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. Configuration:
    Create a `.env` file in the root directory:
+
    ```env
    DEBUG=True
    SECRET_KEY=your-development-secret-key
@@ -49,6 +54,7 @@ A streamlined Django 6.0 project architecture focused on maintainability and cle
    ```
 
 5. Database setup:
+
    ```bash
    python manage.py migrate
    ```
