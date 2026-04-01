@@ -13,7 +13,7 @@ A modern, sustainable marketplace built for the Baylor community.
 ## Technical Stack
 
 - **Framework:** Django 6.0.3
-- **Database (current):** SQLite (`db.sqlite3`)
+- **Database:** SQLite by default, Supabase Postgres via `DATABASE_URL`
 - **Auth Model:** Custom user model via `AUTH_USER_MODEL = 'users.User'`
 - **Environment Management:** Root `.env` file loaded by `config/settings.py`
 
@@ -62,7 +62,9 @@ The project uses a dedicated `users` app with `users.User` inheriting Django `Ab
    ```env
    DEBUG=True
    SECRET_KEY=your-development-secret-key
-   ALLOWED_HOSTS=localhost,127.0.0.1
+   ALLOWED_HOSTS=baylorshare.com,www.baylorshare.com,localhost,127.0.0.1
+   # Optional: Supabase/Postgres connection string (when set, overrides SQLite)
+   DATABASE_URL=postgresql://postgres.iaehsjgixiomahxscdbj:[YOUR-PASSWORD]@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require
    ```
 
 5. Apply migrations:
@@ -92,6 +94,61 @@ python3 manage.py test users.tests
 # Create admin/superuser account
 python3 manage.py createsuperuser
 ```
+
+## Supabase Database Setup
+
+When `DATABASE_URL` is set, Django uses Postgres (`django.db.backends.postgresql`).
+When `DATABASE_URL` is not set, Django falls back to local SQLite.
+
+1. Add the Supabase connection string in `.env`:
+
+   ```env
+   DATABASE_URL=postgresql://postgres.iaehsjgixiomahxscdbj:[YOUR-PASSWORD]@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require
+   ```
+
+2. Install dependencies (includes PostgreSQL driver):
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run migrations against Supabase:
+
+   ```bash
+   python3 manage.py migrate
+   ```
+
+4. Optional: if you change models first, generate + apply migrations:
+
+   ```bash
+   python3 manage.py makemigrations
+   python3 manage.py migrate
+   ```
+
+## Vercel Deployment Notes
+
+- This is a Django app deployed on Vercel using `vercel.json` and `@vercel/python`.
+- Vercel Analytics for Django is supported by loading:
+
+  ```html
+  <script defer src="/_vercel/insights/script.js"></script>
+  ```
+
+- Analytics loading is controlled by:
+
+  ```env
+  VERCEL_ANALYTICS_ENABLED=True
+  ```
+
+- Keep `ALLOWED_HOSTS` set to include your Vercel domain(s).
+- Production host defaults in settings include:
+  - `baylorshare.com`
+  - `www.baylorshare.com`
+- By default, tests use in-memory SQLite even when `DATABASE_URL` points to Supabase (avoids pooled Postgres test DB teardown errors). To force Postgres tests, set:
+
+  ```env
+  USE_POSTGRES_FOR_TESTS=True
+  ```
 
 ## Production Considerations
 
