@@ -160,7 +160,7 @@ When `DATABASE_URL` is not set, Django falls back to local SQLite.
 
 - Login (just log in to Carter's Account)
    - Email: CarterLewis617@gmail.com
-   - Password: xohnes-hatzob-7jejqI
+   - Password: emailed to you
 
 - Start Forwarding Webhooks
 
