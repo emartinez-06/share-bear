@@ -150,6 +150,49 @@ When `DATABASE_URL` is not set, Django falls back to local SQLite.
   USE_POSTGRES_FOR_TESTS=True
   ```
 
+## Stripe testing in local deployment
+- Install Stripe CLI
+   - Mac:
+
+   ```
+   brew install stripe/stripe-cli/stripe
+   ```
+
+- Login (just log in to Carter's Account)
+   - Email: CarterLewis617@gmail.com
+   - Password: xohnes-hatzob-7jejqI
+
+- Start Forwarding Webhooks
+
+   ```
+   stripe listen --forward-to localhost:8000/webhooks/stripe/
+   ```
+
+   - Will give you a webhook key. (whsec...)
+   - Copy this into .env
+
+- Start devserver
+
+   ```
+   python3 manage.py runserver
+   ```
+
+- Test Events
+
+   ```
+   stripe trigger payment_intent.succeeded
+   ```
+
+   ```
+   stripe trigger payment_intent.payment_failed
+   ```
+
+- Test in frontend
+   - Create dummy order
+   - Card number: 4242424242424242
+   - Exp. Date: any future date
+   - CVC: any 3 digits
+
 ## Production Considerations
 
 - Set `DEBUG=False` and provide a secure `SECRET_KEY`.
