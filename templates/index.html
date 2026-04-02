@@ -2,11 +2,226 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>My Django App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Share Bear Checkout</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+      :root {
+        --bg: #f5f8f5;
+        --surface: #ffffff;
+        --text: #173120;
+        --muted: #5a6b61;
+        --accent: #0f7f4f;
+        --accent-hover: #0c6c43;
+        --danger: #b42318;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        background: radial-gradient(circle at 20% 20%, #e8f5e9, var(--bg));
+        color: var(--text);
+      }
+
+      main {
+        max-width: 680px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid #dbe7de;
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 14px 28px rgba(17, 57, 31, 0.08);
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      input {
+        border: 1px solid #b9c8be;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 15px;
+        font-weight: 700;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+      }
+
+      #payment-section {
+        margin-top: 16px;
+      }
+
+      #payment-element {
+        margin: 12px 0;
+      }
+
+      #status {
+        min-height: 24px;
+        font-size: 14px;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+
+      .success {
+        color: var(--accent);
+      }
+    </style>
   </head>
   <body>
-    <h1>Hello, Django!</h1>
-    <p>This is my first template.</p>
+    <main>
+      <section class="card">
+        <h1>Share Bear Payment</h1>
+        <p>Create an order, then pay securely with Stripe.</p>
+
+        <form id="order-form">
+          <div class="field">
+            <label for="name">Order Name</label>
+            <input id="name" name="name" required placeholder="Apartment sublet deposit" />
+          </div>
+
+          <div class="field">
+            <label for="amount">Amount (USD)</label>
+            <input id="amount" name="amount" type="number" min="0.50" step="0.01" required />
+          </div>
+
+          <button type="submit">Create Order and Start Checkout</button>
+        </form>
+
+        <div id="payment-section" hidden>
+          <h2>Complete Payment</h2>
+          <div id="payment-element"></div>
+          <button id="pay-button" type="button">Pay Now</button>
+        </div>
+
+        <div id="status" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script>
+      const orderForm = document.getElementById('order-form');
+      const paymentSection = document.getElementById('payment-section');
+      const payButton = document.getElementById('pay-button');
+      const statusEl = document.getElementById('status');
+
+      let stripe;
+      let elements;
+
+      function setStatus(message, className = '') {
+        statusEl.textContent = message;
+        statusEl.className = className;
+      }
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+          return parts.pop().split(';').shift();
+        }
+        return null;
+      }
+
+      async function postJson(url, payload = null) {
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken') || '',
+        };
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: payload ? JSON.stringify(payload) : null,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Request failed');
+        }
+
+        return data;
+      }
+
+      orderForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setStatus('Creating your order...');
+
+        try {
+          const name = document.getElementById('name').value;
+          const amount = document.getElementById('amount').value;
+
+          const order = await postJson('/api/orders/', { name, amount });
+          const intent = await postJson(`/api/orders/${order.order_id}/payment-intent/`);
+
+          stripe = Stripe(intent.publishable_key);
+          elements = stripe.elements({ clientSecret: intent.client_secret });
+
+          const paymentElement = elements.create('payment');
+          paymentElement.mount('#payment-element');
+
+          paymentSection.hidden = false;
+          setStatus('Order ready. Enter payment details and click Pay Now.');
+        } catch (error) {
+          setStatus(error.message, 'error');
+        }
+      });
+
+      payButton.addEventListener('click', async () => {
+        if (!stripe || !elements) {
+          setStatus('Start checkout first.', 'error');
+          return;
+        }
+
+        setStatus('Confirming payment...');
+        const { error, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: window.location.href,
+          },
+          redirect: 'if_required',
+        });
+
+        if (error) {
+          setStatus(error.message || 'Payment failed.', 'error');
+          return;
+        }
+
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          setStatus('Payment submitted successfully. Webhook will finalize order status.', 'success');
+          return;
+        }
+
+        setStatus('Payment is processing. Please wait for confirmation.', 'success');
+      });
+    </script>
+
     {% if vercel_analytics_enabled %}
       <script defer src="/_vercel/insights/script.js"></script>
     {% endif %}
