@@ -1,6 +1,6 @@
 import json
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 import stripe
 from django.conf import settings
@@ -8,20 +8,26 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_POST
+import resend
 
+from .forms import OrderForm
 from .models import Order
 
 logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+resend.api_key = settings.RESEND_API_KEY
 
 
 @ensure_csrf_cookie
 def home_view(request):
+    form = OrderForm()
+
     return render(
         request,
         'index.html',
         {
+            'form': form,
             'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
             'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
         },
@@ -35,21 +41,17 @@ def create_order(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
 
-    name = str(data.get('name', '')).strip()
-    amount_raw = str(data.get('amount', '')).strip()
+    form = OrderForm(data)
+    if not form.is_valid():
+        first_error = next(iter(form.errors.values()), ['Invalid order data'])[0]
+        return JsonResponse({'error': first_error}, status=400)
 
-    if not name:
-        return JsonResponse({'error': 'Name is required'}, status=400)
+    cleaned_data = form.cleaned_data
+    name = cleaned_data['name']
+    email = cleaned_data['email']
+    amount = cleaned_data['amount'].quantize(Decimal('0.01'))
 
-    try:
-        amount = Decimal(amount_raw).quantize(Decimal('0.01'))
-    except (InvalidOperation, TypeError):
-        return JsonResponse({'error': 'Amount must be a valid number'}, status=400)
-
-    if amount <= 0:
-        return JsonResponse({'error': 'Amount must be greater than 0'}, status=400)
-
-    order = Order.objects.create(name=name, amount=amount)
+    order = Order.objects.create(name=name, email=email, amount=amount)
 
     return JsonResponse(
         {
@@ -123,8 +125,21 @@ def stripe_webhook(request):
 
     if event_type == 'payment_intent.succeeded':
         updated = Order.objects.filter(id=order_id, status='pending').update(status='paid')
-        if not updated:
-            logger.info('No pending order updated for successful payment. order_id=%s', order_id)
+        if updated:
+            try:
+                order = Order.objects.get(id=order_id)
+                resend.Emails.send({
+                    'from': 'onboarding@resend.dev',
+                    'to': order.email,
+                    'subject': 'Payment Confirmed',
+                    'html': f'''
+                        <h2>Thanks, {order.name}!</h2>
+                        <p>Your payment of <strong>${order.amount}</strong> was successful.</p>
+                        <p>Order ID: {order.pk}</p>
+                    ''',
+                })
+            except Exception as exc:
+                logger.exception('Failed to send confirmation email for order %s: %s', order_id, exc)
 
     elif event_type == 'payment_intent.payment_failed':
         updated = Order.objects.filter(id=order_id, status='pending').update(status='failed')

@@ -11,7 +11,7 @@ class StripePaymentFlowTests(TestCase):
 	def test_create_order_success(self):
 		response = self.client.post(
 			reverse('create-order'),
-			data=json.dumps({'name': 'Test order', 'amount': '12.34'}),
+			data=json.dumps({'name': 'Test order', 'email': 'user@example.com', 'amount': '12.34'}),
 			content_type='application/json',
 		)
 
@@ -26,7 +26,7 @@ class StripePaymentFlowTests(TestCase):
 	def test_create_order_invalid_amount(self):
 		response = self.client.post(
 			reverse('create-order'),
-			data=json.dumps({'name': 'Test order', 'amount': '-1'}),
+			data=json.dumps({'name': 'Test order', 'email': 'user@example.com', 'amount': '-1'}),
 			content_type='application/json',
 		)
 
