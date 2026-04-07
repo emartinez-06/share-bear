@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,8 +37,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+VERCEL_ANALYTICS_ENABLED = os.environ.get('VERCEL_ANALYTICS_ENABLED', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+default_allowed_hosts = ['baylorshare.com', 'www.baylorshare.com']
+if DEBUG:
+    default_allowed_hosts.extend(['localhost', '127.0.0.1'])
+
+env_allowed_hosts = os.environ.get('ALLOWED_HOSTS')
+if env_allowed_hosts:
+    ALLOWED_HOSTS = [host.strip() for host in env_allowed_hosts.split(',') if host.strip()]
+else:
+    ALLOWED_HOSTS = default_allowed_hosts
 
 
 # Application definition
@@ -85,12 +96,43 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+
+def build_default_database_config():
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        return {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+
+    parsed = urlparse(database_url)
+    if parsed.scheme not in {'postgres', 'postgresql'}:
+        raise ValueError('DATABASE_URL must start with postgres:// or postgresql://')
+
+    query_params = parse_qs(parsed.query)
+    options = {key: values[-1] for key, values in query_params.items() if values}
+    options.setdefault('sslmode', 'require')
+
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': parsed.path.lstrip('/') or 'postgres',
+        'USER': unquote(parsed.username or ''),
+        'PASSWORD': unquote(parsed.password or ''),
+        'HOST': parsed.hostname or '',
+        'PORT': str(parsed.port or 5432),
+        'OPTIONS': options,
     }
-}
+
+
+DATABASES = {'default': build_default_database_config()}
+
+running_tests = len(sys.argv) > 1 and sys.argv[1] == 'test'
+use_postgres_for_tests = os.environ.get('USE_POSTGRES_FOR_TESTS', 'False') == 'True'
+if running_tests and DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql' and not use_postgres_for_tests:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
 
 
 # Password validation
@@ -128,5 +170,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 AUTH_USER_MODEL = 'users.User'
