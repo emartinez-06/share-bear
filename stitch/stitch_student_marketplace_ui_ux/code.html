@@ -1,384 +1,673 @@
-<!DOCTYPE html>
+<!doctype html>
 
-<html class="light" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>SHARE Bear | Direct Student Buy-Back</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            display: inline-block;
-            line-height: 1;
-            text-transform: none;
-            letter-spacing: normal;
-            word-wrap: normal;
-            white-space: nowrap;
-            direction: ltr;
-        }
-        body { font-family: 'Inter', sans-serif; }
-        h1, h2, h3, h4, .headline { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass-header {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SHARE Bear | Direct Student Buy-Back</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      .headline {
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      .glass-header {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
     </style>
-<script id="tailwind-config">
-        tailwind.config = {
-          darkMode: "class",
-          theme: {
-            extend: {
-              "colors": {
-                      "tertiary-fixed": "#ffdea8",
-                      "secondary-container": "#d7e3da",
-                      "primary": "#00160d",
-                      "background": "#f8faf8",
-                      "surface-dim": "#d8dad9",
-                      "inverse-on-surface": "#eff1ef",
-                      "on-secondary-fixed-variant": "#3e4943",
-                      "outline-variant": "#c1c8c2",
-                      "on-tertiary-fixed": "#271900",
-                      "secondary": "#56615a",
-                      "error": "#ba1a1a",
-                      "on-error-container": "#93000a",
-                      "on-primary-fixed": "#002115",
-                      "tertiary": "#1a1000",
-                      "on-tertiary-container": "#b88400",
-                      "surface-container-low": "#f2f4f2",
-                      "surface-container": "#eceeec",
-                      "primary-fixed": "#c0edd5",
-                      "tertiary-fixed-dim": "#ffba20",
-                      "secondary-fixed-dim": "#bdc9c1",
-                      "surface-container-high": "#e6e9e7",
-                      "inverse-primary": "#a4d0ba",
-                      "on-primary-container": "#6d9682",
-                      "on-secondary-fixed": "#131e18",
-                      "tertiary-container": "#352300",
-                      "on-background": "#191c1b",
-                      "on-surface-variant": "#414844",
-                      "surface-container-highest": "#e1e3e1",
-                      "on-error": "#ffffff",
-                      "primary-container": "#002d1e",
-                      "on-tertiary": "#ffffff",
-                      "primary-fixed-dim": "#a4d0ba",
-                      "surface-variant": "#e1e3e1",
-                      "inverse-surface": "#2e3130",
-                      "secondary-fixed": "#d9e5dd",
-                      "on-tertiary-fixed-variant": "#5e4200",
-                      "surface-container-lowest": "#ffffff",
-                      "error-container": "#ffdad6",
-                      "surface": "#f8faf8",
-                      "on-surface": "#191c1b",
-                      "on-secondary-container": "#5a655e",
-                      "on-secondary": "#ffffff",
-                      "on-primary-fixed-variant": "#264e3d",
-                      "on-primary": "#ffffff",
-                      "outline": "#717974",
-                      "surface-bright": "#f8faf8",
-                      "surface-tint": "#3e6654"
-              },
-              "borderRadius": {
-                      "DEFAULT": "1rem",
-                      "lg": "2rem",
-                      "xl": "3rem",
-                      "full": "9999px"
-              },
-              "fontFamily": {
-                      "headline": ["Plus Jakarta Sans"],
-                      "body": ["Inter"],
-                      "label": ["Inter"]
-              }
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed": "#ffdea8",
+              "secondary-container": "#d7e3da",
+              primary: "#00160d",
+              background: "#f8faf8",
+              "surface-dim": "#d8dad9",
+              "inverse-on-surface": "#eff1ef",
+              "on-secondary-fixed-variant": "#3e4943",
+              "outline-variant": "#c1c8c2",
+              "on-tertiary-fixed": "#271900",
+              secondary: "#56615a",
+              error: "#ba1a1a",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#002115",
+              tertiary: "#1a1000",
+              "on-tertiary-container": "#b88400",
+              "surface-container-low": "#f2f4f2",
+              "surface-container": "#eceeec",
+              "primary-fixed": "#c0edd5",
+              "tertiary-fixed-dim": "#ffba20",
+              "secondary-fixed-dim": "#bdc9c1",
+              "surface-container-high": "#e6e9e7",
+              "inverse-primary": "#a4d0ba",
+              "on-primary-container": "#6d9682",
+              "on-secondary-fixed": "#131e18",
+              "tertiary-container": "#352300",
+              "on-background": "#191c1b",
+              "on-surface-variant": "#414844",
+              "surface-container-highest": "#e1e3e1",
+              "on-error": "#ffffff",
+              "primary-container": "#002d1e",
+              "on-tertiary": "#ffffff",
+              "primary-fixed-dim": "#a4d0ba",
+              "surface-variant": "#e1e3e1",
+              "inverse-surface": "#2e3130",
+              "secondary-fixed": "#d9e5dd",
+              "on-tertiary-fixed-variant": "#5e4200",
+              "surface-container-lowest": "#ffffff",
+              "error-container": "#ffdad6",
+              surface: "#f8faf8",
+              "on-surface": "#191c1b",
+              "on-secondary-container": "#5a655e",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#264e3d",
+              "on-primary": "#ffffff",
+              outline: "#717974",
+              "surface-bright": "#f8faf8",
+              "surface-tint": "#3e6654",
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              lg: "2rem",
+              xl: "3rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Plus Jakarta Sans"],
+              body: ["Inter"],
+              label: ["Inter"],
             },
           },
-        }
+        },
+      };
     </script>
-</head>
-<body class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-primary">
-<!-- Top Navigation Bar -->
-<header class="fixed top-0 w-full z-50 bg-[#f8faf8]/70 dark:bg-[#00160d]/70 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,22,13,0.06)]">
-<div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
-<div class="flex items-center gap-8">
-<span class="text-2xl font-bold tracking-tighter text-[#002D1E] dark:text-[#f8faf8]">SHARE Bear</span>
-<nav class="hidden md:flex gap-6 font-plus-jakarta text-sm tracking-tight">
-<a class="text-[#002D1E] font-bold border-b-2 border-[#002D1E] pb-1 hover:text-[#002D1E] transition-colors duration-300" href="#">Marketplace</a>
-<a class="text-[#002D1E]/60 dark:text-[#d7e3da]/60 hover:text-[#002D1E] transition-colors duration-300" href="#">Instant Buy-Back</a>
-<a class="text-[#002D1E]/60 dark:text-[#d7e3da]/60 hover:text-[#002D1E] transition-colors duration-300" href="#">Support</a>
-</nav>
-</div>
-<div class="flex items-center gap-6">
-<!-- Search Bar -->
-<div class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full w-96 group focus-within:bg-surface-container-lowest transition-all">
-<span class="material-symbols-outlined text-outline">search</span>
-<input class="bg-transparent border-none focus:ring-0 text-sm w-full font-body" placeholder="Search certified items..." type="text"/>
-</div>
-<div class="flex items-center gap-4">
-<button class="scale-95 active:opacity-80 transition-all text-[#002D1E]/60">
-<span class="material-symbols-outlined">notifications</span>
-</button>
-<button class="scale-95 active:opacity-80 transition-all text-[#002D1E]/60">
-<span class="material-symbols-outlined">shopping_cart</span>
-</button>
-<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
-<img alt="User profile" data-alt="close-up portrait of a smiling young student with curly hair and glasses in a brightly lit studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCerACf6lIvHlLglteF1ZmKjPb0iOeSW2BzMGYEaaNg7MTUc-fgMzzZ5wan2LMEJGMKpIdRmEfXtlb97o2EPbqbUmUo3ISOPt5sgbbV_qJqVxL_Nxk3Pprihx5ZgpC_etSdgQ3t1LB-SqD7muDULlTbBnJtOdi1FwpmasClSAqMkVq_jEq0OphQ88yyga6o-uNPAX-JWyathoVL1TNZ95SrJntbdXiZESFZNbfJiyNpGluiNRhGli8Cs4ORWMAhgvzcbNhu55A0WBg"/>
-</div>
-</div>
-</div>
-</div>
-</header>
-<main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
-<!-- Hero Section: Buy-Back Model -->
-<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16">
-<!-- Main CTA Hero: Sell to SHARE Bear -->
-<div class="lg:col-span-8 relative overflow-hidden rounded-lg bg-primary-container p-12 flex flex-col justify-end min-h-[400px]">
-<div class="absolute inset-0 opacity-40">
-<img class="w-full h-full object-cover" data-alt="busy university campus common area with students studying and interacting in a modern architectural setting with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUxL0SNJxJelvE4UQ3X3wqxg8YGulDkH9cEoHHhYdb365_XNDtnxK5ABsutRWeVRaRti-gdUxvLzzHTb1O4MkFiBFjCAQSRwWCvazzWp4HEZO58fDFA3P1dZtxKRxtFaVMfDaGpht-FuH4HXN2QDsDwmSWwIHNcuMqR7PKmSMzH9hsYEhtLX6TkK9ALMyaEk0VtVio0EYHhTYL-RQ56euCsXscyfIFpLfFju5pFIMuQvAflgvYTSviEGRhUaM4xiZmEILoR4L0y_Q"/>
-</div>
-<div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/40 to-transparent"></div>
-<div class="relative z-10">
-<h1 class="text-display-lg text-white font-headline font-extrabold text-5xl lg:text-6xl mb-4 leading-tight">Sell to SHARE Bear.<br/>Get paid instantly.</h1>
-<p class="text-primary-fixed-dim font-body mb-8 max-w-md text-lg">Don't wait for buyers. We buy your dorm essentials, tech, and textbooks directly from you at fair market prices.</p>
-<button class="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-xl font-semibold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform">
-                        Instant AI Assessment <span class="material-symbols-outlined">psychology</span>
-</button>
-</div>
-</div>
-<!-- Side Bento Column -->
-<div class="lg:col-span-4 flex flex-col gap-6">
-<!-- Why Sell to Us? -->
-<div class="bg-surface-container-low rounded-lg p-8 flex-1">
-<h3 class="font-headline font-bold text-xl mb-6">Direct Buy-Back</h3>
-<div class="space-y-4">
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">verified</span>
-<span class="text-sm font-medium">No haggling with peers</span>
-</div>
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">bolt</span>
-<span class="text-sm font-medium">Immediate cash offers</span>
-</div>
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-primary">local_shipping</span>
-<span class="text-sm font-medium">On-campus pickup</span>
-</div>
-</div>
-</div>
-<!-- Savings Widget -->
-<div class="bg-tertiary-fixed rounded-lg p-8 flex flex-col justify-between">
-<div>
-<span class="bg-tertiary-container text-tertiary-fixed px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Certified Program</span>
-<h4 class="font-headline font-bold text-2xl mt-4 leading-none">Every item is SHARE Bear Certified</h4>
-</div>
-<p class="text-tertiary-container/70 text-sm mt-4 font-body">We inspect, clean, and certify every item we buy back before listing it in our shop.</p>
-</div>
-</div>
-</section>
-<!-- Marketplace Filter & Header -->
-<section class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-<div>
-<span class="text-primary/60 font-label font-bold uppercase text-xs tracking-widest">Certified Shop</span>
-<h2 class="text-4xl font-headline font-extrabold mt-2">New Certified Arrivals</h2>
-</div>
-<div class="flex gap-3 overflow-x-auto pb-2 md:pb-0">
-<button class="bg-primary text-white px-6 py-2 rounded-full font-label text-sm whitespace-nowrap">All Certified Items</button>
-<button class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors">Dorm Essentials</button>
-<button class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors">Textbooks</button>
-<button class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors">Electronics</button>
-</div>
-</section>
-<!-- Marketplace Grid -->
-<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-<!-- Item Card 1 -->
-<div class="group">
-<div class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low">
-<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="minimalist wooden desk lamp with warm glow on a clean workspace background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn0JzOPgExpxEx0ULRSCiVv92jxQ8-tAHVVKJi0xNZeOPpkqe4TVkEg0fE3BtrBJPlQ1IrGS6ePrDlughut2wZ0Xbga7gvKLPDTYMkLJfCYLxKnS88_4Rh9r4NTVKZMZ0h3M3Mj1VI4ENB8FX_zb9DgR6uZZukLGkREtHd3QI6Z4-HeOsHs6OimdAIU6ULIhq1SXXGCDMSM-fRQxw_sSzXfYK_mfk3Rf_Nfyo3ikLjrzwDb-XKmFq8LdNY7ePHypEnwGerb0LCSd8"/>
-<div class="absolute top-4 right-4">
-<button class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
-</button>
-</div>
-<div class="absolute bottom-4 left-4 flex gap-2">
-<span class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Certified</span>
-<span class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm">Near New</span>
-</div>
-</div>
-<div class="flex justify-between items-start mb-1">
-<h3 class="font-headline font-bold text-lg">Nordic Desk Lamp</h3>
-<span class="font-headline font-extrabold text-lg">$25</span>
-</div>
-<p class="text-on-surface-variant text-sm mb-4 font-body">Inspected &amp; cleaned by SHARE Bear. Warm LED bulb included.</p>
-<div class="flex gap-2">
-<button class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-lg">shopping_cart</span> Buy Now
-                    </button>
-</div>
-</div>
-<!-- Item Card 2 -->
-<div class="group">
-<div class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low">
-<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="stack of medical textbooks on a wooden table with soft focus library background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnjwBw0vARiybeJroivsdht6yl8e3gurQD65EUHZSYPQtSgFVrZTRU5y_tPnl9POKdtVt3taA618HduX0rXXhBIAT16TuoBd8aA0L6KGink09kWIVb7xLOH708N0QV7M0oLa6HMd4lmc-phQvkFUaabjB86NLpVhtwKKdy-i4Ac6--v_bsspHAzpRTwLpBqFx-gGd-0U-YvUvOpaK3pJbmnWWJQ3VfPHzPS9uL0xK6BDzdeverMSioSRF6y8IoQtvtV82ZJNJJ8eo"/>
-<div class="absolute top-4 right-4">
-<button class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
-</button>
-</div>
-<div class="absolute bottom-4 left-4 flex gap-2">
-<span class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Certified</span>
-<span class="bg-secondary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Fair Condition</span>
-</div>
-</div>
-<div class="flex justify-between items-start mb-1">
-<h3 class="font-headline font-bold text-lg">Bio Science 101</h3>
-<span class="font-headline font-extrabold text-lg">$45</span>
-</div>
-<p class="text-on-surface-variant text-sm mb-4 font-body">Verified edition. Light highlighting, Includes digital access code.</p>
-<div class="flex gap-2">
-<button class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-lg">shopping_cart</span> Buy Now
-                    </button>
-</div>
-</div>
-<!-- Item Card 3 -->
-<div class="group">
-<div class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low">
-<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="top-down view of modern white wireless headphones on a pastel green surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGUz_NvhsjzXoDR3DR7jLsqXU8TpIGcgcQ4xB9r6sQMTXxJ_xrLjZSQYAccXvyjHmSmY3KvXf2M9KdaiU4VgHhz8HrGa_dlUiSsUdoi2Z2tlUbU1VSwsQaJPUDPnP1XFJnqJIOqB2YE_b3oCgRp2gKX7qQW_9Op3sIMswg7_CYbpZfg_izWuE1pEpQTR7RkDXguNCJSRia77QeWnP7s9VIytDCctoicQGGqvGFUcEWK3EnOLzTOiqkyS4R16x-4YAHR3pFka5WQ14"/>
-<div class="absolute top-4 right-4">
-<button class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
-</button>
-</div>
-<div class="absolute bottom-4 left-4 flex gap-2">
-<span class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Certified</span>
-<span class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm">Like New</span>
-</div>
-</div>
-<div class="flex justify-between items-start mb-1">
-<h3 class="font-headline font-bold text-lg">Noise Cancel Beats</h3>
-<span class="font-headline font-extrabold text-lg">$120</span>
-</div>
-<p class="text-on-surface-variant text-sm mb-4 font-body">Functionality tested by SHARE Bear. Original box included.</p>
-<div class="flex gap-2">
-<button class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-lg">shopping_cart</span> Buy Now
-                    </button>
-</div>
-</div>
-<!-- Item Card 4 -->
-<div class="group">
-<div class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low">
-<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="clean black ergonomic office chair in a bright room with window light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKWHX2UUv5wYwdg6CDgXuOKWoL_1vudzDJvioLTDQmfEHXeyEhZqUNb0OwnHBPEzbGNjBUgEfpufAcNA1tKzgLSzv-jJC1KAwSkL-JqFyJi8QrUc62vqepOhTC3Dv14cHto3E4KeqclyW2ihVCrPK88jPLd2XLxWgdwOguiLLw4DmH3WbMbbp9t_FG6_6jlK2rlJUpdBzP18QuoCGclXC_gXsUwWjS0cGmItuA6_yc_7gdV4XBcOQeiFM6XH95XwoVC4RtDrPOcGY"/>
-<div class="absolute top-4 right-4">
-<button class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
-</button>
-</div>
-<div class="absolute bottom-4 left-4 flex gap-2">
-<span class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Certified</span>
-<span class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm">Excellent</span>
-</div>
-</div>
-<div class="flex justify-between items-start mb-1">
-<h3 class="font-headline font-bold text-lg">Ergo Study Chair</h3>
-<span class="font-headline font-extrabold text-lg">$60</span>
-</div>
-<p class="text-on-surface-variant text-sm mb-4 font-body">Sanitized &amp; refurbished. Pickup at SHARE Bear campus hub.</p>
-<div class="flex gap-2">
-<button class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-lg">shopping_cart</span> Buy Now
-                    </button>
-</div>
-</div>
-</section>
-<!-- Buy-Back Workflow Section -->
-<section class="mt-24 bg-surface-container-low rounded-lg p-10 flex flex-col lg:flex-row items-center gap-12">
-<div class="lg:w-1/2">
-<span class="text-primary-container font-label font-bold uppercase text-xs tracking-widest">How Buy-Back Works</span>
-<h2 class="text-4xl font-headline font-extrabold mt-4 mb-6">Cash for your gear, without the hassle.</h2>
-<div class="space-y-6">
-<div class="flex gap-4">
-<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
-<span class="material-symbols-outlined text-primary">photo_camera</span>
-</div>
-<div>
-<h4 class="font-bold text-lg leading-tight">Instant AI Scan</h4>
-<p class="text-on-surface-variant text-sm">Upload a photo. Our AI identifies the item and its current market value instantly.</p>
-</div>
-</div>
-<div class="flex gap-4">
-<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
-<span class="material-symbols-outlined text-primary">price_check</span>
-</div>
-<div>
-<h4 class="font-bold text-lg leading-tight">Guaranteed Offer</h4>
-<p class="text-on-surface-variant text-sm">Accept our fixed-price offer. No waiting for a buyer to find your listing.</p>
-</div>
-</div>
-<div class="flex gap-4">
-<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
-<span class="material-symbols-outlined text-primary">currency_exchange</span>
-</div>
-<div>
-<h4 class="font-bold text-lg leading-tight">Instant Payout</h4>
-<p class="text-on-surface-variant text-sm">Drop it off at a Bear Hub on campus and receive funds to your student account immediately.</p>
-</div>
-</div>
-</div>
-<button class="mt-10 bg-primary text-white px-10 py-4 rounded-xl font-bold hover:bg-primary/90 transition-all">Start AI Assessment</button>
-</div>
-<div class="lg:w-1/2 w-full grid grid-cols-2 gap-4">
-<div class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10">
-<div class="text-3xl font-extrabold font-headline mb-1">100%</div>
-<div class="text-xs font-bold font-label text-on-surface-variant uppercase tracking-wider">Buy-Back Guarantee</div>
-</div>
-<div class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10">
-<div class="text-3xl font-extrabold font-headline mb-1">5 Min</div>
-<div class="text-xs font-bold font-label text-on-surface-variant uppercase tracking-wider">Avg. Processing Time</div>
-</div>
-<div class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10 col-span-2">
-<div class="flex items-center justify-between mb-4">
-<h5 class="font-bold">Recent Buy-Backs</h5>
-<span class="text-xs text-primary font-bold">View Prices</span>
-</div>
-<div class="space-y-4">
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center"><span class="material-symbols-outlined text-sm">laptop</span></div>
-<div class="text-sm">Paid <strong>$450.00</strong> for <em>MacBook Air (2020)</em></div>
-</div>
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center"><span class="material-symbols-outlined text-sm">menu_book</span></div>
-<div class="text-sm">Paid <strong>$55.00</strong> for <em>Chem 201 Textbook</em></div>
-</div>
-</div>
-</div>
-</div>
-</section>
-</main>
-<!-- Bottom Navigation Bar (Mobile) -->
-<nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-surface-container px-6 py-3 flex justify-between items-center z-50">
-<button class="flex flex-col items-center gap-1 text-primary">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">storefront</span>
-<span class="text-[10px] font-bold">Shop</span>
-</button>
-<button class="flex flex-col items-center gap-1 text-on-surface-variant">
-<span class="material-symbols-outlined">favorite</span>
-<span class="text-[10px] font-bold">Saved</span>
-</button>
-<button class="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center -mt-8 shadow-lg">
-<span class="material-symbols-outlined">add_a_photo</span>
-</button>
-<button class="flex flex-col items-center gap-1 text-on-surface-variant">
-<span class="material-symbols-outlined">account_balance_wallet</span>
-<span class="text-[10px] font-bold">Payouts</span>
-</button>
-<button class="flex flex-col items-center gap-1 text-on-surface-variant">
-<span class="material-symbols-outlined">person</span>
-<span class="text-[10px] font-bold">Account</span>
-</button>
-</nav>
-<!-- Floating Action Button -->
-<button class="hidden md:flex fixed bottom-8 right-8 bg-primary text-white p-4 rounded-xl shadow-xl items-center gap-3 hover:scale-105 active:scale-95 transition-all z-40 group">
-<span class="material-symbols-outlined">psychology</span>
-<span class="font-bold font-label">Sell to SHARE Bear</span>
-</button>
-</body></html>
+  </head>
+  <body
+    class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-primary"
+  >
+    <!-- Top Navigation Bar -->
+    <header
+      class="fixed top-0 w-full z-50 bg-[#f8faf8]/70 dark:bg-[#00160d]/70 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,22,13,0.06)]"
+    >
+      <div
+        class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto"
+      >
+        <div class="flex items-center gap-8">
+          <span
+            class="text-2xl font-bold tracking-tighter text-[#002D1E] dark:text-[#f8faf8]"
+            >SHARE Bear</span
+          >
+          <nav
+            class="hidden md:flex gap-6 font-plus-jakarta text-sm tracking-tight"
+          >
+            <a
+              class="text-[#002D1E] font-bold border-b-2 border-[#002D1E] pb-1 hover:text-[#002D1E] transition-colors duration-300"
+              href="#"
+              >Marketplace</a
+            >
+            <a
+              class="text-[#002D1E]/60 dark:text-[#d7e3da]/60 hover:text-[#002D1E] transition-colors duration-300"
+              href="#"
+              >Instant Buy-Back</a
+            >
+            <a
+              class="text-[#002D1E]/60 dark:text-[#d7e3da]/60 hover:text-[#002D1E] transition-colors duration-300"
+              href="#"
+              >Support</a
+            >
+          </nav>
+        </div>
+        <div class="flex items-center gap-6">
+          <!-- Search Bar -->
+          <div
+            class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full w-96 group focus-within:bg-surface-container-lowest transition-all"
+          >
+            <span class="material-symbols-outlined text-outline">search</span>
+            <input
+              class="bg-transparent border-none focus:ring-0 text-sm w-full font-body"
+              placeholder="Search certified items..."
+              type="text"
+            />
+          </div>
+          <div class="flex items-center gap-4">
+            <button
+              class="scale-95 active:opacity-80 transition-all text-[#002D1E]/60"
+            >
+              <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button
+              class="scale-95 active:opacity-80 transition-all text-[#002D1E]/60"
+            >
+              <span class="material-symbols-outlined">shopping_cart</span>
+            </button>
+            <div
+              class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed"
+            >
+              <img
+                alt="User profile"
+                data-alt="close-up portrait of a smiling young student with curly hair and glasses in a brightly lit studio setting"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCerACf6lIvHlLglteF1ZmKjPb0iOeSW2BzMGYEaaNg7MTUc-fgMzzZ5wan2LMEJGMKpIdRmEfXtlb97o2EPbqbUmUo3ISOPt5sgbbV_qJqVxL_Nxk3Pprihx5ZgpC_etSdgQ3t1LB-SqD7muDULlTbBnJtOdi1FwpmasClSAqMkVq_jEq0OphQ88yyga6o-uNPAX-JWyathoVL1TNZ95SrJntbdXiZESFZNbfJiyNpGluiNRhGli8Cs4ORWMAhgvzcbNhu55A0WBg"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
+      <!-- Hero Section: Buy-Back Model -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16">
+        <!-- Main CTA Hero: Sell to SHARE Bear -->
+        <div
+          class="lg:col-span-8 relative overflow-hidden rounded-lg bg-primary-container p-12 flex flex-col justify-end min-h-[400px]"
+        >
+          <div class="absolute inset-0 opacity-40">
+            <img
+              class="w-full h-full object-cover"
+              data-alt="busy university campus common area with students studying and interacting in a modern architectural setting with soft natural light"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUxL0SNJxJelvE4UQ3X3wqxg8YGulDkH9cEoHHhYdb365_XNDtnxK5ABsutRWeVRaRti-gdUxvLzzHTb1O4MkFiBFjCAQSRwWCvazzWp4HEZO58fDFA3P1dZtxKRxtFaVMfDaGpht-FuH4HXN2QDsDwmSWwIHNcuMqR7PKmSMzH9hsYEhtLX6TkK9ALMyaEk0VtVio0EYHhTYL-RQ56euCsXscyfIFpLfFju5pFIMuQvAflgvYTSviEGRhUaM4xiZmEILoR4L0y_Q"
+            />
+          </div>
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-primary via-primary/40 to-transparent"
+          ></div>
+          <div class="relative z-10">
+            <h1
+              class="text-display-lg text-white font-headline font-extrabold text-5xl lg:text-6xl mb-4 leading-tight"
+            >
+              Sell to SHARE Bear.<br />Get paid instantly.
+            </h1>
+            <p class="text-primary-fixed-dim font-body mb-8 max-w-md text-lg">
+              Don't wait for buyers. We buy your dorm essentials, tech, and
+              textbooks directly from you at fair market prices.
+            </p>
+            <button
+              class="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-xl font-semibold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform"
+            >
+              Instant AI Assessment
+              <span class="material-symbols-outlined">psychology</span>
+            </button>
+          </div>
+        </div>
+        <!-- Side Bento Column -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+          <!-- Why Sell to Us? -->
+          <div class="bg-surface-container-low rounded-lg p-8 flex-1">
+            <h3 class="font-headline font-bold text-xl mb-6">
+              Direct Buy-Back
+            </h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary"
+                  >verified</span
+                >
+                <span class="text-sm font-medium">No haggling with peers</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">bolt</span>
+                <span class="text-sm font-medium">Immediate cash offers</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary"
+                  >local_shipping</span
+                >
+                <span class="text-sm font-medium">On-campus pickup</span>
+              </div>
+            </div>
+          </div>
+          <!-- Savings Widget -->
+          <div
+            class="bg-tertiary-fixed rounded-lg p-8 flex flex-col justify-between"
+          >
+            <div>
+              <span
+                class="bg-tertiary-container text-tertiary-fixed px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                >Certified Program</span
+              >
+              <h4 class="font-headline font-bold text-2xl mt-4 leading-none">
+                Every item is SHARE Bear Certified
+              </h4>
+            </div>
+            <p class="text-tertiary-container/70 text-sm mt-4 font-body">
+              We inspect, clean, and certify every item we buy back before
+              listing it in our shop.
+            </p>
+          </div>
+        </div>
+      </section>
+      <!-- Marketplace Filter & Header -->
+      <section
+        class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6"
+      >
+        <div>
+          <span
+            class="text-primary/60 font-label font-bold uppercase text-xs tracking-widest"
+            >Certified Shop</span
+          >
+          <h2 class="text-4xl font-headline font-extrabold mt-2">
+            New Certified Arrivals
+          </h2>
+        </div>
+        <div class="flex gap-3 overflow-x-auto pb-2 md:pb-0">
+          <button
+            class="bg-primary text-white px-6 py-2 rounded-full font-label text-sm whitespace-nowrap"
+          >
+            All Certified Items
+          </button>
+          <button
+            class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors"
+          >
+            Dorm Essentials
+          </button>
+          <button
+            class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors"
+          >
+            Textbooks
+          </button>
+          <button
+            class="bg-surface-container-low text-primary px-6 py-2 rounded-full font-label text-sm whitespace-nowrap hover:bg-secondary-container transition-colors"
+          >
+            Electronics
+          </button>
+        </div>
+      </section>
+      <!-- Marketplace Grid -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Item Card 1 -->
+        <div class="group">
+          <div
+            class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low"
+          >
+            <img
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              data-alt="minimalist wooden desk lamp with warm glow on a clean workspace background"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn0JzOPgExpxEx0ULRSCiVv92jxQ8-tAHVVKJi0xNZeOPpkqe4TVkEg0fE3BtrBJPlQ1IrGS6ePrDlughut2wZ0Xbga7gvKLPDTYMkLJfCYLxKnS88_4Rh9r4NTVKZMZ0h3M3Mj1VI4ENB8FX_zb9DgR6uZZukLGkREtHd3QI6Z4-HeOsHs6OimdAIU6ULIhq1SXXGCDMSM-fRQxw_sSzXfYK_mfk3Rf_Nfyo3ikLjrzwDb-XKmFq8LdNY7ePHypEnwGerb0LCSd8"
+            />
+            <div class="absolute top-4 right-4">
+              <button
+                class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  style="font-variation-settings: &quot;FILL&quot; 0"
+                  >favorite</span
+                >
+              </button>
+            </div>
+            <div class="absolute bottom-4 left-4 flex gap-2">
+              <span
+                class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase"
+                >Certified</span
+              >
+              <span
+                class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm"
+                >Near New</span
+              >
+            </div>
+          </div>
+          <div class="flex justify-between items-start mb-1">
+            <h3 class="font-headline font-bold text-lg">Nordic Desk Lamp</h3>
+            <span class="font-headline font-extrabold text-lg">$25</span>
+          </div>
+          <p class="text-on-surface-variant text-sm mb-4 font-body">
+            Inspected &amp; cleaned by SHARE Bear. Warm LED bulb included.
+          </p>
+          <div class="flex gap-2">
+            <button
+              class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >shopping_cart</span
+              >
+              Buy Now
+            </button>
+          </div>
+        </div>
+        <!-- Item Card 2 -->
+        <div class="group">
+          <div
+            class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low"
+          >
+            <img
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              data-alt="stack of medical textbooks on a wooden table with soft focus library background"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnjwBw0vARiybeJroivsdht6yl8e3gurQD65EUHZSYPQtSgFVrZTRU5y_tPnl9POKdtVt3taA618HduX0rXXhBIAT16TuoBd8aA0L6KGink09kWIVb7xLOH708N0QV7M0oLa6HMd4lmc-phQvkFUaabjB86NLpVhtwKKdy-i4Ac6--v_bsspHAzpRTwLpBqFx-gGd-0U-YvUvOpaK3pJbmnWWJQ3VfPHzPS9uL0xK6BDzdeverMSioSRF6y8IoQtvtV82ZJNJJ8eo"
+            />
+            <div class="absolute top-4 right-4">
+              <button
+                class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  style="font-variation-settings: &quot;FILL&quot; 0"
+                  >favorite</span
+                >
+              </button>
+            </div>
+            <div class="absolute bottom-4 left-4 flex gap-2">
+              <span
+                class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase"
+                >Certified</span
+              >
+              <span
+                class="bg-secondary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase"
+                >Fair Condition</span
+              >
+            </div>
+          </div>
+          <div class="flex justify-between items-start mb-1">
+            <h3 class="font-headline font-bold text-lg">Bio Science 101</h3>
+            <span class="font-headline font-extrabold text-lg">$45</span>
+          </div>
+          <p class="text-on-surface-variant text-sm mb-4 font-body">
+            Verified edition. Light highlighting, Includes digital access code.
+          </p>
+          <div class="flex gap-2">
+            <button
+              class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >shopping_cart</span
+              >
+              Buy Now
+            </button>
+          </div>
+        </div>
+        <!-- Item Card 3 -->
+        <div class="group">
+          <div
+            class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low"
+          >
+            <img
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              data-alt="top-down view of modern white wireless headphones on a pastel green surface"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGUz_NvhsjzXoDR3DR7jLsqXU8TpIGcgcQ4xB9r6sQMTXxJ_xrLjZSQYAccXvyjHmSmY3KvXf2M9KdaiU4VgHhz8HrGa_dlUiSsUdoi2Z2tlUbU1VSwsQaJPUDPnP1XFJnqJIOqB2YE_b3oCgRp2gKX7qQW_9Op3sIMswg7_CYbpZfg_izWuE1pEpQTR7RkDXguNCJSRia77QeWnP7s9VIytDCctoicQGGqvGFUcEWK3EnOLzTOiqkyS4R16x-4YAHR3pFka5WQ14"
+            />
+            <div class="absolute top-4 right-4">
+              <button
+                class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  style="font-variation-settings: &quot;FILL&quot; 0"
+                  >favorite</span
+                >
+              </button>
+            </div>
+            <div class="absolute bottom-4 left-4 flex gap-2">
+              <span
+                class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase"
+                >Certified</span
+              >
+              <span
+                class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm"
+                >Like New</span
+              >
+            </div>
+          </div>
+          <div class="flex justify-between items-start mb-1">
+            <h3 class="font-headline font-bold text-lg">Noise Cancel Beats</h3>
+            <span class="font-headline font-extrabold text-lg">$120</span>
+          </div>
+          <p class="text-on-surface-variant text-sm mb-4 font-body">
+            Functionality tested by SHARE Bear. Original box included.
+          </p>
+          <div class="flex gap-2">
+            <button
+              class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >shopping_cart</span
+              >
+              Buy Now
+            </button>
+          </div>
+        </div>
+        <!-- Item Card 4 -->
+        <div class="group">
+          <div
+            class="aspect-square rounded-lg overflow-hidden relative mb-4 bg-surface-container-low"
+          >
+            <img
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              data-alt="clean black ergonomic office chair in a bright room with window light"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKWHX2UUv5wYwdg6CDgXuOKWoL_1vudzDJvioLTDQmfEHXeyEhZqUNb0OwnHBPEzbGNjBUgEfpufAcNA1tKzgLSzv-jJC1KAwSkL-JqFyJi8QrUc62vqepOhTC3Dv14cHto3E4KeqclyW2ihVCrPK88jPLd2XLxWgdwOguiLLw4DmH3WbMbbp9t_FG6_6jlK2rlJUpdBzP18QuoCGclXC_gXsUwWjS0cGmItuA6_yc_7gdV4XBcOQeiFM6XH95XwoVC4RtDrPOcGY"
+            />
+            <div class="absolute top-4 right-4">
+              <button
+                class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-primary hover:bg-white transition-colors shadow-sm"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  style="font-variation-settings: &quot;FILL&quot; 0"
+                  >favorite</span
+                >
+              </button>
+            </div>
+            <div class="absolute bottom-4 left-4 flex gap-2">
+              <span
+                class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase"
+                >Certified</span
+              >
+              <span
+                class="bg-white/90 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase backdrop-blur-sm"
+                >Excellent</span
+              >
+            </div>
+          </div>
+          <div class="flex justify-between items-start mb-1">
+            <h3 class="font-headline font-bold text-lg">Ergo Study Chair</h3>
+            <span class="font-headline font-extrabold text-lg">$60</span>
+          </div>
+          <p class="text-on-surface-variant text-sm mb-4 font-body">
+            Sanitized &amp; refurbished. Pickup at SHARE Bear campus hub.
+          </p>
+          <div class="flex gap-2">
+            <button
+              class="flex-1 bg-surface-container-highest text-primary py-3 rounded-DEFAULT font-bold text-sm hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >shopping_cart</span
+              >
+              Buy Now
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- Buy-Back Workflow Section -->
+      <section
+        class="mt-24 bg-surface-container-low rounded-lg p-10 flex flex-col lg:flex-row items-center gap-12"
+      >
+        <div class="lg:w-1/2">
+          <span
+            class="text-primary-container font-label font-bold uppercase text-xs tracking-widest"
+            >How Buy-Back Works</span
+          >
+          <h2 class="text-4xl font-headline font-extrabold mt-4 mb-6">
+            Cash for your gear, without the hassle.
+          </h2>
+          <div class="space-y-6">
+            <div class="flex gap-4">
+              <div
+                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >photo_camera</span
+                >
+              </div>
+              <div>
+                <h4 class="font-bold text-lg leading-tight">Instant AI Scan</h4>
+                <p class="text-on-surface-variant text-sm">
+                  Upload a photo. Our AI identifies the item and its current
+                  market value instantly.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <div
+                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >price_check</span
+                >
+              </div>
+              <div>
+                <h4 class="font-bold text-lg leading-tight">
+                  Guaranteed Offer
+                </h4>
+                <p class="text-on-surface-variant text-sm">
+                  Accept our fixed-price offer. No waiting for a buyer to find
+                  your listing.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <div
+                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >currency_exchange</span
+                >
+              </div>
+              <div>
+                <h4 class="font-bold text-lg leading-tight">Instant Payout</h4>
+                <p class="text-on-surface-variant text-sm">
+                  Drop it off at a Bear Hub on campus and receive funds to your
+                  student account immediately.
+                </p>
+              </div>
+            </div>
+          </div>
+          <button
+            class="mt-10 bg-primary text-white px-10 py-4 rounded-xl font-bold hover:bg-primary/90 transition-all"
+          >
+            Start AI Assessment
+          </button>
+        </div>
+        <div class="lg:w-1/2 w-full grid grid-cols-2 gap-4">
+          <div
+            class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10"
+          >
+            <div class="text-3xl font-extrabold font-headline mb-1">100%</div>
+            <div
+              class="text-xs font-bold font-label text-on-surface-variant uppercase tracking-wider"
+            >
+              Buy-Back Guarantee
+            </div>
+          </div>
+          <div
+            class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10"
+          >
+            <div class="text-3xl font-extrabold font-headline mb-1">5 Min</div>
+            <div
+              class="text-xs font-bold font-label text-on-surface-variant uppercase tracking-wider"
+            >
+              Avg. Processing Time
+            </div>
+          </div>
+          <div
+            class="bg-white p-6 rounded-lg shadow-sm border border-outline-variant/10 col-span-2"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-bold">Recent Buy-Backs</h5>
+              <span class="text-xs text-primary font-bold">View Prices</span>
+            </div>
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-sm">laptop</span>
+                </div>
+                <div class="text-sm">
+                  Paid <strong>$450.00</strong> for <em>MacBook Air (2020)</em>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >menu_book</span
+                  >
+                </div>
+                <div class="text-sm">
+                  Paid <strong>$55.00</strong> for <em>Chem 201 Textbook</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- Bottom Navigation Bar (Mobile) -->
+    <nav
+      class="md:hidden fixed bottom-0 w-full bg-white border-t border-surface-container px-6 py-3 flex justify-between items-center z-50"
+    >
+      <button class="flex flex-col items-center gap-1 text-primary">
+        <span
+          class="material-symbols-outlined"
+          style="font-variation-settings: &quot;FILL&quot; 1"
+          >storefront</span
+        >
+        <span class="text-[10px] font-bold">Shop</span>
+      </button>
+      <button class="flex flex-col items-center gap-1 text-on-surface-variant">
+        <span class="material-symbols-outlined">favorite</span>
+        <span class="text-[10px] font-bold">Saved</span>
+      </button>
+      <button
+        class="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center -mt-8 shadow-lg"
+      >
+        <span class="material-symbols-outlined">add_a_photo</span>
+      </button>
+      <button class="flex flex-col items-center gap-1 text-on-surface-variant">
+        <span class="material-symbols-outlined">account_balance_wallet</span>
+        <span class="text-[10px] font-bold">Payouts</span>
+      </button>
+      <button class="flex flex-col items-center gap-1 text-on-surface-variant">
+        <span class="material-symbols-outlined">person</span>
+        <span class="text-[10px] font-bold">Account</span>
+      </button>
+    </nav>
+    <!-- Floating Action Button -->
+    <button
+      class="hidden md:flex fixed bottom-8 right-8 bg-primary text-white p-4 rounded-xl shadow-xl items-center gap-3 hover:scale-105 active:scale-95 transition-all z-40 group"
+    >
+      <span class="material-symbols-outlined">psychology</span>
+      <span class="font-bold font-label">Sell to SHARE Bear</span>
+    </button>
+  </body>
+</html>
+
