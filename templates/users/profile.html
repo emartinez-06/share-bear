@@ -1,0 +1,152 @@
+{% extends "base_auth.html" %}
+{% block title %}My Account — SHARE Bear{% endblock %}
+
+{% block body %}
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl" style="box-shadow: 0 1px 0 rgba(0,48,32,0.08);">
+    <div class="flex justify-between items-center w-full px-6 py-4 max-w-5xl mx-auto">
+        <a href="/" class="flex items-center gap-3">
+            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+            <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+        </a>
+        <a href="{% url 'logout' %}"
+            class="flex items-center gap-2 text-sm font-semibold font-body text-on-surface-variant hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-xl">logout</span>
+            Sign out
+        </a>
+    </div>
+</header>
+
+<main class="pt-28 pb-20 px-6 max-w-5xl mx-auto">
+
+    {% for msg in messages %}
+    <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center gap-3 fade-up">
+        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+        <p class="text-emerald-800 text-sm font-body font-medium">{{ msg }}</p>
+    </div>
+    {% endfor %}
+
+    <!-- Profile Header -->
+    <section class="fade-up mb-8">
+        <div class="bg-primary rounded-xl p-8 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div class="absolute inset-0 opacity-20 pointer-events-none">
+                <svg class="w-full h-full" viewBox="0 0 900 200" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <pattern id="pgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#pgrid)"/>
+                    <circle cx="820" cy="20" r="140" fill="rgba(254,183,26,0.12)"/>
+                </svg>
+            </div>
+
+            <div class="relative z-10 w-20 h-20 rounded-xl bg-secondary-container flex items-center justify-center shrink-0">
+                <span class="font-display font-bold text-2xl text-on-secondary-container">
+                    {{ user.first_name|first|upper }}{% if user.last_name %}{{ user.last_name|first|upper }}{% endif %}
+                </span>
+            </div>
+
+            <div class="relative z-10 flex-1">
+                <h1 class="font-display font-bold text-2xl text-on-primary tracking-tightest mb-1">
+                    {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}
+                </h1>
+                <p class="text-on-primary/60 font-body text-sm mb-3">
+                    @{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}
+                </p>
+                {% if user.graduation_year %}
+                <span class="inline-flex items-center gap-1.5 bg-on-primary/10 text-on-primary/80 px-3 py-1 rounded-full text-xs font-body font-medium">
+                    <span class="material-symbols-outlined text-sm">school</span>
+                    Class of {{ user.graduation_year }}
+                </span>
+                {% endif %}
+            </div>
+
+            <a href="/" class="relative z-10 bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-xl font-bold font-body text-sm hover:brightness-95 transition-all flex items-center gap-2 shrink-0">
+                <span class="material-symbols-outlined text-base">storefront</span>
+                Browse
+            </a>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 fade-up" style="animation-delay:0.05s">
+        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
+            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
+            <p class="text-on-surface-variant text-xs font-body">Items Listed</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
+            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
+            <p class="text-on-surface-variant text-xs font-body">Sold</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
+            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
+            <p class="text-on-surface-variant text-xs font-body">Purchased</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
+            <p class="font-display font-bold text-3xl text-secondary-container mb-1">$0</p>
+            <p class="text-on-surface-variant text-xs font-body">Credits</p>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Listings -->
+        <div class="lg:col-span-2 fade-up" style="animation-delay:0.10s">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-display font-bold text-xl text-primary tracking-tightest">My Listings</h2>
+            </div>
+            <div class="bg-surface-container-lowest rounded-xl p-12 ambient-shadow flex flex-col items-center justify-center text-center">
+                <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-3xl text-outline-variant">inventory_2</span>
+                </div>
+                <h3 class="font-display font-bold text-lg text-on-surface mb-2">No listings yet</h3>
+                <p class="text-on-surface-variant text-sm font-body mb-6 max-w-xs">
+                    Start by selling an item — get an instant AI-powered valuation and cash offer.
+                </p>
+                <a href="/"
+                    class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold font-body text-sm hover:bg-primary-container transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">psychology</span>
+                    Start AI Assessment
+                </a>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="fade-up" style="animation-delay:0.15s">
+            <h2 class="font-display font-bold text-xl text-primary tracking-tightest mb-4">Account</h2>
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+                <div class="px-5 py-4 border-b border-surface-container-high">
+                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Full name</p>
+                    <p class="font-medium text-on-surface font-body text-sm">
+                        {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}—{% endif %}
+                    </p>
+                </div>
+                <div class="px-5 py-4 border-b border-surface-container-high">
+                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Username</p>
+                    <p class="font-medium text-on-surface font-body text-sm">@{{ user.username }}</p>
+                </div>
+                <div class="px-5 py-4 border-b border-surface-container-high">
+                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Email</p>
+                    <p class="font-medium text-on-surface font-body text-sm">{{ user.email|default:"—" }}</p>
+                </div>
+                {% if user.graduation_year %}
+                <div class="px-5 py-4 border-b border-surface-container-high">
+                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Graduation year</p>
+                    <p class="font-medium text-on-surface font-body text-sm">{{ user.graduation_year }}</p>
+                </div>
+                {% endif %}
+                <div class="px-5 py-4">
+                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Member since</p>
+                    <p class="font-medium text-on-surface font-body text-sm">{{ user.date_joined|date:"F Y" }}</p>
+                </div>
+            </div>
+
+            <a href="{% url 'logout' %}"
+                class="mt-4 w-full flex items-center justify-center gap-2 bg-surface-container text-on-surface-variant py-3 rounded-xl text-sm font-semibold font-body hover:bg-surface-container-high transition-colors">
+                <span class="material-symbols-outlined text-base">logout</span>
+                Sign out
+            </a>
+        </div>
+    </div>
+</main>
+{% endblock %}

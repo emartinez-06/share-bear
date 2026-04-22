@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>{% block title %}SHARE Bear{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f9f9f8; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; }
+        .ambient-shadow { box-shadow: 0 20px 40px -4px rgba(0,48,32,0.06); }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.45s ease-out both; }
+        .field-input {
+            width: 100%;
+            background: #f3f4f3;
+            border: 1.5px solid #e1e3e2;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.9375rem;
+            color: #191c1c;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .field-input:focus {
+            outline: none;
+            border-color: #003020;
+            background: #ffffff;
+        }
+        .field-input::placeholder { color: #9ca8a4; }
+        .field-input.error { border-color: #dc2626; }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#003020',
+                        'primary-container': '#154734',
+                        'on-primary': '#ffffff',
+                        'secondary-container': '#feb71a',
+                        'on-secondary-container': '#6b4b00',
+                        surface: '#f9f9f8',
+                        'surface-container-low': '#f3f4f3',
+                        'surface-container': '#edeeed',
+                        'surface-container-high': '#e1e3e2',
+                        'surface-container-lowest': '#ffffff',
+                        'on-surface': '#191c1c',
+                        'on-surface-variant': '#414944',
+                        'outline-variant': '#c0c9c2',
+                    },
+                    borderRadius: {
+                        DEFAULT: '1rem',
+                        lg: '1.5rem',
+                        xl: '2rem',
+                        full: '9999px',
+                    },
+                    fontFamily: {
+                        display: ['Manrope', 'sans-serif'],
+                        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    letterSpacing: { tightest: '-.02em' },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+{% block body %}{% endblock %}
+</body>
+</html>
