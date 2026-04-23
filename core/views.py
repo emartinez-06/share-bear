@@ -1,7 +1,9 @@
 import logging
+from urllib.parse import quote
 
 from django.conf import settings
-from django.shortcuts import render
+from django.http import HttpResponseForbidden
+from django.shortcuts import redirect, render
 
 from .forms import AIQuoteForm
 from .gemini_quote import build_quote_prompt, get_quote_from_gemini
@@ -15,6 +17,23 @@ def home_view(request):
         request,
         'index.html',
         {'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED},
+    )
+
+
+def admin_quotes_view(request):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+
+    quotes = AIQuote.objects.select_related('user').all()
+    return render(
+        request,
+        'admin_quotes.html',
+        {
+            'quotes': quotes,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
     )
 
 

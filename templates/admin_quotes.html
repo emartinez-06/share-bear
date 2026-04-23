@@ -1,0 +1,83 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}Admin Quotes | SHARE Bear{% endblock %}
+
+{% block body %}
+<div class="min-h-screen">
+    <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+        <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-8">
+                <a href="{% url 'home' %}" class="flex items-center gap-3">
+                    <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+                </a>
+                <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'admin_quotes' %}">Admin Panel</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                    <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-28 pb-20 px-6 max-w-6xl mx-auto">
+        <section class="fade-up">
+            <div class="mb-6">
+                <h1 class="font-display font-bold text-3xl text-primary tracking-tightest">AI Quotes Processed</h1>
+                <p class="text-on-surface-variant text-sm mt-2">All user-submitted AI quote responses across the platform.</p>
+            </div>
+
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[900px]">
+                        <thead class="bg-surface-container">
+                            <tr>
+                                <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Date</th>
+                                <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">User</th>
+                                <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Item</th>
+                                <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Make / Model</th>
+                                <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Quote</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quote in quotes %}
+                            <tr class="border-t border-surface-container-high align-top">
+                                <td class="px-5 py-4 text-sm text-on-surface-variant whitespace-nowrap">{{ quote.created_at|date:"M j, Y g:i A" }}</td>
+                                <td class="px-5 py-4 text-sm text-on-surface font-medium">@{{ quote.user.username }}</td>
+                                <td class="px-5 py-4">
+                                    <p class="text-sm font-semibold text-on-surface">{{ quote.item_name }}</p>
+                                    <p class="text-xs text-on-surface-variant mt-1">{{ quote.description }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-sm text-on-surface-variant">
+                                    {% if quote.unknown_make_model %}
+                                    Unknown
+                                    {% else %}
+                                    {{ quote.make|default:"—" }} / {{ quote.model|default:"—" }}
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4 text-sm text-on-surface whitespace-pre-wrap">{{ quote.quote_text }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-5 py-8 text-center text-sm text-on-surface-variant">No AI quotes found yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+{% if vercel_analytics_enabled %}
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+{% endif %}
+{% endblock %}
