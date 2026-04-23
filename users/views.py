@@ -3,6 +3,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
+from core.models import AIQuote
+
 from .forms import LoginForm, SignupForm
 
 
@@ -49,4 +51,5 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    return render(request, 'users/profile.html')
+    quotes = AIQuote.objects.filter(user=request.user)[:10]
+    return render(request, 'users/profile.html', {'quotes': quotes})

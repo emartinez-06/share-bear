@@ -177,3 +177,7 @@ AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Google Gemini (AI Quote)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '') or None
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')

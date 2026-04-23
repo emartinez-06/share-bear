@@ -2,17 +2,32 @@
 {% block title %}My Account — SHARE Bear{% endblock %}
 
 {% block body %}
-<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl" style="box-shadow: 0 1px 0 rgba(0,48,32,0.08);">
-    <div class="flex justify-between items-center w-full px-6 py-4 max-w-5xl mx-auto">
-        <a href="/" class="flex items-center gap-3">
-            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
-            <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
-        </a>
-        <a href="{% url 'logout' %}"
-            class="flex items-center gap-2 text-sm font-semibold font-body text-on-surface-variant hover:text-primary transition-colors">
-            <span class="material-symbols-outlined text-xl">logout</span>
-            Sign out
-        </a>
+<header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+    <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3">
+                <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+                <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+            </a>
+            <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
+            <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="scale-95 active:opacity-80 transition-all text-primary/60">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            {% if user.is_authenticated %}
+            <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+            <a href="{% url 'signup' %}" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+            {% endif %}
+        </div>
     </div>
 </header>
 
@@ -25,128 +40,59 @@
     </div>
     {% endfor %}
 
-    <!-- Profile Header -->
-    <section class="fade-up mb-8">
-        <div class="bg-primary rounded-xl p-8 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div class="absolute inset-0 opacity-20 pointer-events-none">
-                <svg class="w-full h-full" viewBox="0 0 900 200" preserveAspectRatio="xMidYMid slice">
-                    <defs>
-                        <pattern id="pgrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#pgrid)"/>
-                    <circle cx="820" cy="20" r="140" fill="rgba(254,183,26,0.12)"/>
-                </svg>
-            </div>
-
-            <div class="relative z-10 w-20 h-20 rounded-xl bg-secondary-container flex items-center justify-center shrink-0">
-                <span class="font-display font-bold text-2xl text-on-secondary-container">
-                    {{ user.first_name|first|upper }}{% if user.last_name %}{{ user.last_name|first|upper }}{% endif %}
-                </span>
-            </div>
-
-            <div class="relative z-10 flex-1">
-                <h1 class="font-display font-bold text-2xl text-on-primary tracking-tightest mb-1">
-                    {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}
-                </h1>
-                <p class="text-on-primary/60 font-body text-sm mb-3">
-                    @{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}
+    <section class="fade-up max-w-xl mx-auto">
+        <h1 class="font-display font-bold text-2xl text-primary tracking-tightest mb-6">Account</h1>
+        <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Full name</p>
+                <p class="font-medium text-on-surface font-body text-sm">
+                    {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}—{% endif %}
                 </p>
-                {% if user.graduation_year %}
-                <span class="inline-flex items-center gap-1.5 bg-on-primary/10 text-on-primary/80 px-3 py-1 rounded-full text-xs font-body font-medium">
-                    <span class="material-symbols-outlined text-sm">school</span>
-                    Class of {{ user.graduation_year }}
-                </span>
-                {% endif %}
             </div>
-
-            <a href="/" class="relative z-10 bg-secondary-container text-on-secondary-container px-5 py-2.5 rounded-xl font-bold font-body text-sm hover:brightness-95 transition-all flex items-center gap-2 shrink-0">
-                <span class="material-symbols-outlined text-base">storefront</span>
-                Browse
-            </a>
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Username</p>
+                <p class="font-medium text-on-surface font-body text-sm">@{{ user.username }}</p>
+            </div>
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Graduation year</p>
+                <p class="font-medium text-on-surface font-body text-sm">{{ user.graduation_year|default:"—" }}</p>
+            </div>
+            <div class="px-5 py-4">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Member since</p>
+                <p class="font-medium text-on-surface font-body text-sm">{{ user.date_joined|date:"F Y" }}</p>
+            </div>
         </div>
     </section>
 
-    <!-- Stats -->
-    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 fade-up" style="animation-delay:0.05s">
-        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
-            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
-            <p class="text-on-surface-variant text-xs font-body">Items Listed</p>
+    <section class="fade-up max-w-3xl mx-auto mt-12">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="font-display font-bold text-2xl text-primary tracking-tightest">Past AI Quotes</h2>
+            <a href="{% url 'ai_quote' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Get a new quote</a>
         </div>
-        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
-            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
-            <p class="text-on-surface-variant text-xs font-body">Sold</p>
-        </div>
-        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
-            <p class="font-display font-bold text-3xl text-primary mb-1">0</p>
-            <p class="text-on-surface-variant text-xs font-body">Purchased</p>
-        </div>
-        <div class="bg-surface-container-lowest rounded-xl p-5 ambient-shadow text-center">
-            <p class="font-display font-bold text-3xl text-secondary-container mb-1">$0</p>
-            <p class="text-on-surface-variant text-xs font-body">Credits</p>
+
+        <div class="space-y-4">
+            {% for quote in quotes %}
+            <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="font-display font-bold text-lg tracking-tight text-on-surface">{{ quote.item_name }}</h3>
+                    <p class="text-xs text-on-surface-variant font-body">{{ quote.created_at|date:"M j, Y g:i A" }}</p>
+                </div>
+                <p class="text-sm text-on-surface-variant font-body mb-3">{{ quote.description }}</p>
+                <div class="mb-3 text-xs text-on-surface-variant font-body">
+                    {% if quote.unknown_make_model %}
+                    Make/model: Unknown
+                    {% else %}
+                    Make/model: {{ quote.make|default:"—" }} / {{ quote.model|default:"—" }}
+                    {% endif %}
+                </div>
+                <div class="bg-surface-container rounded-lg p-4 text-sm text-on-surface font-body whitespace-pre-wrap">{{ quote.quote_text }}</div>
+            </article>
+            {% empty %}
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-6">
+                <p class="text-sm text-on-surface-variant font-body">You do not have any AI quotes yet.</p>
+            </div>
+            {% endfor %}
         </div>
     </section>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Listings -->
-        <div class="lg:col-span-2 fade-up" style="animation-delay:0.10s">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="font-display font-bold text-xl text-primary tracking-tightest">My Listings</h2>
-            </div>
-            <div class="bg-surface-container-lowest rounded-xl p-12 ambient-shadow flex flex-col items-center justify-center text-center">
-                <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
-                    <span class="material-symbols-outlined text-3xl text-outline-variant">inventory_2</span>
-                </div>
-                <h3 class="font-display font-bold text-lg text-on-surface mb-2">No listings yet</h3>
-                <p class="text-on-surface-variant text-sm font-body mb-6 max-w-xs">
-                    Start by selling an item — get an instant AI-powered valuation and cash offer.
-                </p>
-                <a href="/"
-                    class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold font-body text-sm hover:bg-primary-container transition-colors flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base">psychology</span>
-                    Start AI Assessment
-                </a>
-            </div>
-        </div>
-
-        <!-- Account Details -->
-        <div class="fade-up" style="animation-delay:0.15s">
-            <h2 class="font-display font-bold text-xl text-primary tracking-tightest mb-4">Account</h2>
-            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
-                <div class="px-5 py-4 border-b border-surface-container-high">
-                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Full name</p>
-                    <p class="font-medium text-on-surface font-body text-sm">
-                        {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}—{% endif %}
-                    </p>
-                </div>
-                <div class="px-5 py-4 border-b border-surface-container-high">
-                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Username</p>
-                    <p class="font-medium text-on-surface font-body text-sm">@{{ user.username }}</p>
-                </div>
-                <div class="px-5 py-4 border-b border-surface-container-high">
-                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Email</p>
-                    <p class="font-medium text-on-surface font-body text-sm">{{ user.email|default:"—" }}</p>
-                </div>
-                {% if user.graduation_year %}
-                <div class="px-5 py-4 border-b border-surface-container-high">
-                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Graduation year</p>
-                    <p class="font-medium text-on-surface font-body text-sm">{{ user.graduation_year }}</p>
-                </div>
-                {% endif %}
-                <div class="px-5 py-4">
-                    <p class="text-xs text-on-surface-variant font-body mb-0.5">Member since</p>
-                    <p class="font-medium text-on-surface font-body text-sm">{{ user.date_joined|date:"F Y" }}</p>
-                </div>
-            </div>
-
-            <a href="{% url 'logout' %}"
-                class="mt-4 w-full flex items-center justify-center gap-2 bg-surface-container text-on-surface-variant py-3 rounded-xl text-sm font-semibold font-body hover:bg-surface-container-high transition-colors">
-                <span class="material-symbols-outlined text-base">logout</span>
-                Sign out
-            </a>
-        </div>
-    </div>
 </main>
 {% endblock %}

@@ -50,38 +50,6 @@
             box-shadow: 0 32px 64px -8px rgba(0, 48, 32, 0.06);
         }
         
-        /* View transitions */
-        .view { display: none; }
-        .view.active { display: block; }
-        
-        /* Smooth fade animation */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .view.active { animation: fadeIn 0.4s ease-out; }
-        
-        /* Upload zone styling */
-        .upload-zone {
-            border: 2px dashed rgba(0, 48, 32, 0.2);
-            transition: all 0.3s ease;
-        }
-        .upload-zone:hover, .upload-zone.dragover {
-            border-color: rgba(0, 48, 32, 0.5);
-            background: rgba(0, 48, 32, 0.02);
-        }
-        
-        /* Step indicator animations */
-        .step-indicator {
-            transition: all 0.3s ease;
-        }
-        .step-indicator.active {
-            background: linear-gradient(135deg, #feb71a 0%, #ffdea8 100%);
-        }
-        .step-indicator.completed {
-            background: linear-gradient(135deg, #003020 0%, #154734 100%);
-        }
-        
         /* Smooth scrolling */
         html { scroll-behavior: smooth; }
     </style>
@@ -132,31 +100,25 @@
 <body class="bg-surface text-on-surface antialiased min-h-screen">
 
     <!-- ==================== HOME VIEW ==================== -->
-    <div id="home-view" class="view active">
+    <div>
         <!-- Top Navigation Bar -->
         <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
             <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
                 <div class="flex items-center gap-8">
-                    <a href="#" class="flex items-center gap-3">
+                    <a href="{% url 'home' %}" class="flex items-center gap-3">
                         <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
                         <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
                     </a>
+                    <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
                     <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
-                        <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="#">Marketplace</a>
+                        <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                        <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
                     </nav>
                 </div>
                 <div class="flex items-center gap-6">
-                    <!-- Search Bar -->
-                    <div class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full w-96 group focus-within:bg-surface-container-lowest transition-all">
-                        <span class="material-symbols-outlined text-outline-variant">search</span>
-                        <input class="bg-transparent border-none focus:ring-0 text-sm w-full font-body" placeholder="Search certified items..." type="text"/>
-                    </div>
                     <div class="flex items-center gap-4">
                         <button class="scale-95 active:opacity-80 transition-all text-primary/60">
                             <span class="material-symbols-outlined">notifications</span>
-                        </button>
-                        <button class="scale-95 active:opacity-80 transition-all text-primary/60">
-                            <span class="material-symbols-outlined">shopping_cart</span>
                         </button>
                         {% if user.is_authenticated %}
                         <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
@@ -172,11 +134,8 @@
         </header>
 
         <main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
-            <!-- Hero Section: Buy-Back Model -->
             <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16">
-                <!-- Main CTA Hero: Sell to SHARE Bear -->
                 <div class="lg:col-span-8 relative overflow-hidden rounded-lg bg-primary p-12 flex flex-col justify-end min-h-[400px]">
-                    <!-- Decorative background pattern -->
                     <div class="absolute inset-0 opacity-20">
                         <svg class="w-full h-full" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
                             <defs>
@@ -191,161 +150,84 @@
                     </div>
                     <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-transparent"></div>
                     <div class="relative z-10">
-                        <h1 class="text-on-primary font-display font-bold text-5xl lg:text-6xl mb-4 leading-tight tracking-tightest">Sell to SHARE Bear.<br/>Get paid instantly.</h1>
-                        <p class="text-on-primary/70 font-body mb-8 max-w-md text-lg">Don't wait for buyers. We buy your dorm essentials, tech, and textbooks directly from you at fair market prices.</p>
-                        <button onclick="showView('assessment-view')" class="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-bold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform ambient-shadow-lg">
-                            Start AI Assessment <span class="material-symbols-outlined">psychology</span>
-                        </button>
+                        <h1 class="text-on-primary font-display font-bold text-5xl lg:text-6xl mb-4 leading-tight tracking-tightest">Sell to SHARE Bear.<br/>Get paid quickly.</h1>
+                        <p class="text-on-primary/75 font-body mb-8 max-w-md text-lg">We buy dorm essentials, tech, and textbooks directly so you can skip listing delays and back-and-forth haggling.</p>
+                        <a href="{% url 'ai_quote' %}" class="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-bold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform ambient-shadow-lg">
+                            Get a Quote <span class="material-symbols-outlined">request_quote</span>
+                        </a>
                     </div>
                 </div>
-                
-                <!-- Side Bento Column -->
+
                 <div class="lg:col-span-4 flex flex-col gap-6">
-                    <!-- Why Sell to Us? -->
                     <div class="bg-surface-container rounded-lg p-8 flex-1">
                         <h3 class="font-display font-bold text-xl mb-6 text-primary">Direct Buy-Back</h3>
                         <div class="space-y-4">
                             <div class="flex items-center gap-3">
                                 <span class="material-symbols-outlined text-primary">verified</span>
-                                <span class="text-sm font-medium text-on-surface">No haggling with peers</span>
+                                <span class="text-sm font-medium text-on-surface">Simple, transparent offers</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="material-symbols-outlined text-primary">bolt</span>
-                                <span class="text-sm font-medium text-on-surface">Immediate cash offers</span>
+                                <span class="text-sm font-medium text-on-surface">Fast quoting flow</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="material-symbols-outlined text-primary">local_shipping</span>
-                                <span class="text-sm font-medium text-on-surface">On-campus pickup</span>
+                                <span class="text-sm font-medium text-on-surface">Convenient handoff options</span>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Certified Badge -->
+
                     <div class="bg-secondary-container rounded-lg p-8 flex flex-col justify-between">
                         <div>
                             <span class="bg-on-secondary-container text-secondary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Certified Program</span>
-                            <h4 class="font-display font-bold text-2xl mt-4 leading-none text-on-secondary-container">Every item is SHARE Bear Certified</h4>
+                            <h4 class="font-display font-bold text-2xl mt-4 leading-none text-on-secondary-container">Every item goes through a quality check</h4>
                         </div>
-                        <p class="text-on-secondary-container/70 text-sm mt-4 font-body">We inspect, clean, and certify every item we buy back before listing it in our shop.</p>
+                        <p class="text-on-secondary-container/70 text-sm mt-4 font-body">We inspect and prepare items before they enter the next stage in the SHARE Bear cycle.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Value Props Section (SHARE Bear-Only, Circular, Intelligent) -->
             <section class="mb-16">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Card 1: SHARE Bear-Only -->
-                    <div class="bg-primary rounded-lg p-10 flex flex-col justify-end min-h-[300px]">
-                        <div class="mb-auto">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-on-primary opacity-80 mb-6">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                <path d="M9 12l2 2 4-4"></path>
-                            </svg>
-                        </div>
-                        <h3 class="font-display text-3xl font-bold text-on-primary mb-4">SHARE Bear-Only</h3>
-                        <p class="font-body text-on-primary/80">Secure authentication via Single Sign-On ensures a trusted peer-to-peer ecosystem.</p>
+                    <div class="bg-primary rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
+                        <h3 class="font-display text-3xl font-bold text-on-primary mb-4">Trusted</h3>
+                        <p class="font-body text-on-primary/80">Built for students who want a safe, reliable way to sell and rebuy essentials.</p>
                     </div>
-                    
-                    <!-- Card 2: Circular -->
-                    <div class="bg-surface-container rounded-lg p-10 flex flex-col justify-end min-h-[300px]">
-                        <div class="mb-auto">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary opacity-80 mb-6">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                            </svg>
-                        </div>
+                    <div class="bg-surface-container rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
                         <h3 class="font-display text-3xl font-bold text-primary mb-4">Circular</h3>
-                        <p class="font-body text-on-surface-variant">Reduce waste by keeping essentials within the community cycle.</p>
+                        <p class="font-body text-on-surface-variant">Keep useful items in circulation and reduce waste each semester.</p>
                     </div>
-                    
-                    <!-- Card 3: Intelligent -->
-                    <div class="bg-surface-container rounded-lg p-10 flex flex-col justify-end min-h-[300px]">
-                        <div class="mb-auto">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary opacity-80 mb-6">
-                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                            </svg>
-                        </div>
-                        <h3 class="font-display text-3xl font-bold text-primary mb-4">Intelligent</h3>
-                        <p class="font-body text-on-surface-variant">AI-driven appraisals provide instant market valuations for your gear.</p>
+                    <div class="bg-surface-container rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
+                        <h3 class="font-display text-3xl font-bold text-primary mb-4">Efficient</h3>
+                        <p class="font-body text-on-surface-variant">From quote to handoff, the flow is designed to be quick and low-friction.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Buy-Back Workflow Section -->
-            <section class="bg-surface-container-low rounded-lg p-10 flex flex-col lg:flex-row items-center gap-12 mb-16">
-                <div class="lg:w-1/2">
-                    <span class="text-primary font-display font-bold uppercase text-xs tracking-widest">How Buy-Back Works</span>
-                    <h2 class="text-4xl font-display font-bold mt-4 mb-6 text-primary tracking-tightest">Cash for your gear, without the hassle.</h2>
-                    <div class="space-y-6">
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-surface-container-lowest rounded-full flex items-center justify-center ambient-shadow shrink-0">
-                                <span class="material-symbols-outlined text-primary">photo_camera</span>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg leading-tight text-on-surface">Instant AI Scan</h4>
-                                <p class="text-on-surface-variant text-sm">Upload a photo. Our AI identifies the item and its current market value instantly.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-surface-container-lowest rounded-full flex items-center justify-center ambient-shadow shrink-0">
-                                <span class="material-symbols-outlined text-primary">price_check</span>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg leading-tight text-on-surface">Guaranteed Offer</h4>
-                                <p class="text-on-surface-variant text-sm">Accept our fixed-price offer. No waiting for a buyer to find your listing.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-surface-container-lowest rounded-full flex items-center justify-center ambient-shadow shrink-0">
-                                <span class="material-symbols-outlined text-primary">currency_exchange</span>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg leading-tight text-on-surface">Instant Payout</h4>
-                                <p class="text-on-surface-variant text-sm">Drop it off at a Bear Hub on campus and receive funds to your student account immediately.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="showView('assessment-view')" class="mt-10 bg-primary text-on-primary px-10 py-4 rounded-xl font-bold hover:bg-primary-container transition-all ambient-shadow">Start AI Assessment</button>
-                </div>
-                <div class="lg:w-1/2 w-full grid grid-cols-2 gap-4">
+            <section class="bg-surface-container-low rounded-lg p-10 mb-16">
+                <h2 class="text-4xl font-display font-bold mb-6 text-primary tracking-tightest">How it works</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <div class="text-3xl font-bold font-display mb-1 text-primary">100%</div>
-                        <div class="text-xs font-bold font-body text-on-surface-variant uppercase tracking-wider">Buy-Back Guarantee</div>
+                        <h4 class="font-bold text-on-surface mb-2">1. Get your free AI quote</h4>
+                        <p class="text-sm text-on-surface-variant">Start with item details to receive an initial quote.</p>
                     </div>
                     <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <div class="text-3xl font-bold font-display mb-1 text-primary">5 Min</div>
-                        <div class="text-xs font-bold font-body text-on-surface-variant uppercase tracking-wider">Avg. Processing Time</div>
+                        <h4 class="font-bold text-on-surface mb-2">2. Accept quote and upload video</h4>
+                        <p class="text-sm text-on-surface-variant">Accept the quote for further review and upload a video of your item.</p>
                     </div>
-                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow col-span-2">
-                        <div class="flex items-center justify-between mb-4">
-                            <h5 class="font-bold text-on-surface">Recent Buy-Backs</h5>
-                            <span class="text-xs text-primary font-bold cursor-pointer hover:underline">View Prices</span>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-sm text-primary">laptop</span></div>
-                                <div class="text-sm text-on-surface">Paid <strong>$450.00</strong> for <em>MacBook Air (2020)</em></div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-sm text-primary">menu_book</span></div>
-                                <div class="text-sm text-on-surface">Paid <strong>$55.00</strong> for <em>Chem 201 Textbook</em></div>
-                            </div>
-                        </div>
+                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
+                        <h4 class="font-bold text-on-surface mb-2">3. We review and finalize price</h4>
+                        <p class="text-sm text-on-surface-variant">Our team reviews your submission and confirms a final price.</p>
+                    </div>
+                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
+                        <h4 class="font-bold text-on-surface mb-2">4. Payment and pickup details</h4>
+                        <p class="text-sm text-on-surface-variant">We reach out with next steps for payment and pickup.</p>
                     </div>
                 </div>
-            </section>
-
-            <!-- Coming Soon: Marketplace -->
-            <section class="text-center py-16 bg-surface-container rounded-lg">
-                <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">storefront</span>
-                <h3 class="font-display font-bold text-2xl mb-2 text-primary">Marketplace Coming Soon</h3>
-                <p class="text-on-surface-variant max-w-md mx-auto font-body">We're currently in pilot mode. Once we have certified items from buy-backs, they'll appear here for you to browse and purchase.</p>
             </section>
         </main>
 
-        <!-- Footer -->
-        <footer class="w-full py-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 mt-20 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
+        <footer class="w-full py-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
             <div class="mb-4 md:mb-0 flex items-center gap-3">
                 <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-6 h-6 rounded object-cover">
                 <div>
@@ -359,7 +241,6 @@
             </div>
         </footer>
 
-        <!-- Bottom Navigation Bar (Mobile) -->
         <nav class="md:hidden fixed bottom-0 w-full bg-surface-container-lowest ambient-shadow px-6 py-3 flex justify-between items-center z-50">
             <button class="flex flex-col items-center gap-1 text-primary">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">storefront</span>
@@ -369,9 +250,9 @@
                 <span class="material-symbols-outlined">favorite</span>
                 <span class="text-[10px] font-bold">Saved</span>
             </button>
-            <button onclick="showView('assessment-view')" class="bg-secondary-container text-on-secondary-container w-12 h-12 rounded-full flex items-center justify-center -mt-8 shadow-lg">
-                <span class="material-symbols-outlined">add_a_photo</span>
-            </button>
+            <a href="{% url 'ai_quote' %}" class="bg-secondary-container text-on-secondary-container w-12 h-12 rounded-full flex items-center justify-center -mt-8 shadow-lg">
+                <span class="material-symbols-outlined">request_quote</span>
+            </a>
             <button class="flex flex-col items-center gap-1 text-on-surface-variant">
                 <span class="material-symbols-outlined">account_balance_wallet</span>
                 <span class="text-[10px] font-bold">Payouts</span>
@@ -388,141 +269,7 @@
             </a>
             {% endif %}
         </nav>
-
-        <!-- Floating Action Button -->
-        <button onclick="showView('assessment-view')" class="hidden md:flex fixed bottom-8 right-8 bg-secondary-container text-on-secondary-container p-4 rounded-xl ambient-shadow-lg items-center gap-3 hover:scale-105 active:scale-95 transition-all z-40 group">
-            <span class="material-symbols-outlined">psychology</span>
-            <span class="font-bold font-body">Sell to SHARE Bear</span>
-        </button>
     </div>
-
-    <!-- ==================== AI ASSESSMENT VIEW ==================== -->
-    <div id="assessment-view" class="view">
-        <!-- Header with Back -->
-        <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
-            <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
-                <div class="flex items-center gap-4">
-                    <button onclick="showView('home-view')" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:bg-surface-container transition-colors">
-                        <span class="material-symbols-outlined text-primary">arrow_back</span>
-                    </button>
-                    <span class="text-xl font-bold tracking-tightest text-primary font-display">AI Assessment</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button class="text-primary text-sm font-bold hover:underline font-body">Need Help?</button>
-                </div>
-            </div>
-        </header>
-
-        <main class="pt-28 pb-20 px-8 max-w-[900px] mx-auto">
-            <!-- Progress Steps -->
-            <div class="flex items-center justify-center gap-2 mb-12">
-                <div class="step-indicator active w-16 h-2 rounded-full"></div>
-                <div class="step-indicator w-16 h-2 rounded-full bg-outline-variant/30"></div>
-                <div class="step-indicator w-16 h-2 rounded-full bg-outline-variant/30"></div>
-            </div>
-
-            <!-- Upload Section -->
-            <section class="bg-surface-container-lowest rounded-lg p-10 ambient-shadow-lg mb-8">
-                <div class="text-center mb-8">
-                    <h2 class="font-display font-bold text-3xl mb-2 text-primary tracking-tightest">Upload Your Item</h2>
-                    <p class="text-on-surface-variant font-body">Take a clear photo or upload an image. Our AI will identify and value your item instantly.</p>
-                </div>
-
-                <!-- Upload Zone -->
-                <div class="upload-zone rounded-lg p-12 flex flex-col items-center justify-center min-h-[300px] cursor-pointer transition-all" id="upload-zone">
-                    <div class="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center mb-6">
-                        <span class="material-symbols-outlined text-4xl text-primary">add_a_photo</span>
-                    </div>
-                    <h4 class="font-display font-bold text-xl mb-2 text-on-surface">Drop your photo here</h4>
-                    <p class="text-on-surface-variant text-sm mb-6 font-body">or click to browse files</p>
-                    <div class="flex gap-3">
-                        <button class="bg-surface-container-low px-6 py-3 rounded-full text-sm font-medium flex items-center gap-2 hover:bg-surface-container transition-colors text-on-surface">
-                            <span class="material-symbols-outlined text-lg">photo_library</span>
-                            Choose File
-                        </button>
-                        <button class="bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full text-sm font-medium flex items-center gap-2 hover:scale-105 transition-transform">
-                            <span class="material-symbols-outlined text-lg">photo_camera</span>
-                            Take Photo
-                        </button>
-                    </div>
-                </div>
-
-                <input type="file" id="file-input" accept="image/*" class="hidden">
-            </section>
-
-            <!-- Item Categories -->
-            <section class="bg-surface-container-low rounded-lg p-8 mb-8">
-                <h3 class="font-display font-bold text-lg mb-4 text-primary">What are you selling?</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-2 hover:bg-surface-container transition-colors group">
-                        <span class="material-symbols-outlined text-2xl text-primary group-hover:scale-110 transition-transform">laptop</span>
-                        <span class="text-sm font-medium text-on-surface">Electronics</span>
-                    </button>
-                    <button class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-2 hover:bg-surface-container transition-colors group">
-                        <span class="material-symbols-outlined text-2xl text-primary group-hover:scale-110 transition-transform">menu_book</span>
-                        <span class="text-sm font-medium text-on-surface">Textbooks</span>
-                    </button>
-                    <button class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-2 hover:bg-surface-container transition-colors group">
-                        <span class="material-symbols-outlined text-2xl text-primary group-hover:scale-110 transition-transform">chair</span>
-                        <span class="text-sm font-medium text-on-surface">Furniture</span>
-                    </button>
-                    <button class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-2 hover:bg-surface-container transition-colors group">
-                        <span class="material-symbols-outlined text-2xl text-primary group-hover:scale-110 transition-transform">more_horiz</span>
-                        <span class="text-sm font-medium text-on-surface">Other</span>
-                    </button>
-                </div>
-            </section>
-
-            <!-- Tips Section -->
-            <section class="bg-secondary-container/30 rounded-lg p-6">
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-on-secondary-container">lightbulb</span>
-                    </div>
-                    <div>
-                        <h4 class="font-bold mb-1 text-on-surface">Tips for a Great Photo</h4>
-                        <ul class="text-sm text-on-surface-variant space-y-1 font-body">
-                            <li>• Use good lighting—natural light works best</li>
-                            <li>• Capture the entire item in frame</li>
-                            <li>• Include any labels, brand names, or serial numbers</li>
-                            <li>• Show any wear or damage for accurate pricing</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <script>
-        function showView(viewId) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            window.scrollTo(0, 0);
-        }
-
-        // Drag and drop handling
-        const uploadZone = document.getElementById('upload-zone');
-        const fileInput = document.getElementById('file-input');
-
-        if (uploadZone && fileInput) {
-            uploadZone.addEventListener('click', () => fileInput.click());
-            
-            uploadZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadZone.classList.add('dragover');
-            });
-            
-            uploadZone.addEventListener('dragleave', () => {
-                uploadZone.classList.remove('dragover');
-            });
-            
-            uploadZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadZone.classList.remove('dragover');
-                // Handle file drop - frontend only for now
-            });
-        }
-    </script>
 
     <!-- Vercel Analytics -->
     {% if vercel_analytics_enabled %}
