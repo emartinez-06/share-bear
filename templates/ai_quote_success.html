@@ -4,7 +4,7 @@
 {% block title %}Quote ready | SHARE Bear{% endblock %}
 
 {% block body %}
-<div class="min-h-screen">
+<div class="min-h-screen relative">
     <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
         <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
             <div class="flex items-center gap-8">
@@ -39,27 +39,105 @@
         </div>
     </header>
 
-    <main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
-        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10 fade-up">
-            <div class="lg:col-span-4 bg-surface-container rounded-lg p-8">
-                <div class="mb-5 inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
-                    <span class="material-symbols-outlined text-4xl text-primary">check_circle</span>
+    <main class="relative z-10 pt-28 pb-20 px-6 min-h-[70vh] flex flex-col items-center justify-center max-w-2xl mx-auto">
+        {% if dev_preview %}
+        <p class="mb-6 w-full max-w-md rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-left text-sm text-amber-950 font-body" role="status">
+            <span class="font-bold">Dev preview</span> — static offer, no API call. Path: <code class="text-xs bg-amber-100/80 px-1 rounded">/ai-quote/dev-success/</code>
+        </p>
+        {% endif %}
+        <section class="text-center fade-up w-full">
+            <div class="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 ring-2 ring-primary/20">
+                <span class="material-symbols-outlined text-5xl text-primary">celebration</span>
+            </div>
+            <h1 class="font-display font-bold text-3xl sm:text-4xl text-primary tracking-tightest mb-2">Your quote is ready</h1>
+            <p class="text-on-surface-variant text-sm sm:text-base font-body mb-8 max-w-md mx-auto leading-relaxed">
+                SHARE Bear’s buy-back offer for <span class="font-semibold text-on-surface">{{ item_name }}</span>
+            </p>
+            <div class="mb-8 rounded-2xl bg-surface-container ambient-shadow border border-primary/20 px-8 py-10 sm:py-12">
+                <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-body mb-3">We’re willing to offer</p>
+                <p class="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl text-primary tabular-nums tracking-tight">{{ offer_display }}</p>
+            </div>
+
+            {% if quote %}
+            <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7">
+                <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">Accept this offer</h2>
+                <p class="text-sm text-on-surface-variant font-body leading-relaxed mb-5">
+                    Upload a short video of the item to confirm the condition. After we review the video, we’ll accept this buy-back for you in the app.
+                </p>
+                {% if quote.quote_accepted_by_admin %}
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 font-body">
+                    <span class="font-semibold">Offer confirmed</span> — SHARE Bear has accepted this buy-back. You can close this page or start another quote.
                 </div>
-                <h1 class="font-display font-bold text-3xl text-primary tracking-tightest mb-2">Your quote is ready</h1>
-                <p class="text-on-surface-variant text-sm leading-relaxed">We generated a buy-back estimate for <span class="font-semibold text-on-surface">{{ item_name }}</span>.</p>
-                <div class="mt-6 flex flex-col gap-3">
-                    <a href="{% url 'ai_quote' %}" class="inline-flex justify-center items-center font-semibold text-on-secondary-container bg-secondary-container px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">Quote another item</a>
-                    <a href="{% url 'home' %}" class="inline-flex justify-center items-center font-semibold text-primary border border-primary/40 px-6 py-3 rounded-xl hover:bg-primary/5 transition-colors">Back to home</a>
+                {% else %}
+                {% if quote.has_video %}
+                <p class="text-sm text-on-surface font-body mb-4">
+                    <span class="inline-flex items-center gap-1.5 font-medium text-on-surface">
+                        <span class="material-symbols-outlined text-primary text-base">check_circle</span>
+                        Video received — review in progress
+                    </span>
+                </p>
+                <p class="text-xs text-on-surface-variant font-body">You can replace the video before we confirm (same form below).</p>
+                {% endif %}
+                {% if not video_upload_configured %}
+                <p class="text-sm text-amber-900 bg-amber-50 border border-amber-200/80 rounded-lg px-4 py-3 font-body" role="status">
+                    Video upload is not configured for this environment (missing Supabase storage settings).
+                </p>
+                {% else %}
+                <form method="post" enctype="multipart/form-data" action="{% url 'quote_video_upload' quote_id=quote.pk %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="id_video" class="block text-sm font-semibold text-on-surface mb-1.5">Video file</label>
+                        <p class="text-xs text-on-surface-variant mb-2">MP4, WebM, or MOV — max about {{ quote_video_max_mb|default:100 }} MB</p>
+                        <input type="file" name="video" id="id_video" accept="video/mp4,video/webm,video/quicktime,video/*" required class="block w-full text-sm text-on-surface file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold" />
+                    </div>
+                    <button type="submit" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 px-6 py-3 rounded-xl transition-opacity w-full sm:w-auto">
+                        {% if quote.has_video %}Replace video{% else %}Upload video to accept this offer{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% elif dev_preview %}
+            <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7 opacity-[0.98]">
+                <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">Accept this offer</h2>
+                <p class="text-sm text-on-surface-variant font-body leading-relaxed mb-2">
+                    Upload a short video of the item to confirm the condition. After we review the video, we’ll accept this buy-back for you in the app.
+                </p>
+                <p class="text-xs text-amber-900/90 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2 font-body mb-5" role="note">
+                    <span class="font-semibold">UI preview</span> — the button below matches production (disabled here; no real quote to attach).
+                </p>
+                <fieldset disabled class="min-w-0 border-0 p-0 m-0 space-y-4">
+                    <div>
+                        <span class="block text-sm font-semibold text-on-surface mb-1.5">Video file</span>
+                        <p class="text-xs text-on-surface-variant mb-2">MP4, WebM, or MOV — max about {{ quote_video_max_mb|default:100 }} MB</p>
+                        <input type="file" name="dev_video" id="id_dev_video" accept="video/mp4,video/webm,video/quicktime,video/*" class="block w-full text-sm text-on-surface file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold" title="Preview only" />
+                    </div>
+                    <button type="button" class="font-display font-bold text-on-secondary-container bg-secondary-container px-6 py-3 rounded-xl w-full sm:w-auto cursor-not-allowed" tabindex="-1">
+                        Upload video to accept this offer
+                    </button>
+                </fieldset>
+            </div>
+            {% elif not dev_preview %}
+            <div class="mb-8 w-full text-left rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-lowest/50 px-6 py-6 sm:px-8">
+                <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">Accept with a video</h2>
+                <p class="text-sm text-on-surface-variant font-body leading-relaxed mb-4">
+                    You’re not signed in, so this quote was not saved. <span class="text-on-surface font-medium">Sign in, request your quote again,</span> then you can upload a video on this page to start acceptance.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{% url 'login' %}" class="inline-flex justify-center items-center text-sm font-semibold font-body text-on-primary bg-primary px-5 py-2.5 rounded-xl hover:opacity-90">Sign in</a>
+                    <a href="{% url 'signup' %}" class="inline-flex justify-center items-center text-sm font-semibold font-body text-primary border border-primary/40 px-5 py-2.5 rounded-xl hover:bg-primary/5">Create account</a>
                 </div>
             </div>
-            <div class="lg:col-span-8 ambient-shadow bg-surface-container-lowest rounded-lg p-6 sm:p-8 border border-outline-variant/20">
-                <h2 class="font-display font-bold text-sm uppercase tracking-wider text-on-surface-variant mb-4">AI response</h2>
-                <div class="text-on-surface font-body text-sm leading-relaxed whitespace-pre-wrap">{{ quote_text }}</div>
+            {% endif %}
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                <a href="{% url 'ai_quote' %}" class="inline-flex justify-center items-center font-semibold text-on-secondary-container bg-secondary-container px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">Quote another item</a>
+                <a href="{% url 'home' %}" class="inline-flex justify-center items-center font-semibold text-primary border border-primary/40 px-6 py-3 rounded-xl hover:bg-primary/5 transition-colors">Back to home</a>
             </div>
         </section>
     </main>
 
-    <footer class="w-full py-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
+    <footer class="relative z-10 w-full py-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
         <div class="mb-4 md:mb-0 flex items-center gap-3">
             <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-6 h-6 rounded object-cover">
             <div>
@@ -73,6 +151,21 @@
         </div>
     </footer>
 </div>
+
+{% if show_confetti %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof confetti !== 'function') return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  const o = { origin: { y: 0.65 }, zIndex: 0 };
+  confetti({ ...o, particleCount: 80, spread: 60 });
+  setTimeout(function () { confetti({ ...o, particleCount: 60, spread: 100, startVelocity: 35 }); }, 200);
+  setTimeout(function () { confetti({ ...o, particleCount: 50, spread: 120, startVelocity: 25, scalar: 0.9 }); }, 400);
+});
+</script>
+{% endif %}
 
 {% if vercel_analytics_enabled %}
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>

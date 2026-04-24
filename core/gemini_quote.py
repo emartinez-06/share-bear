@@ -1,4 +1,40 @@
+import re
+
 from django.conf import settings
+
+_USD = re.compile(r"\$[\d,]+(?:\.\d{2})?")
+
+
+def extract_share_bear_offer_amount(quote_text: str) -> str | None:
+    """
+    Return the cash offer (e.g. '$150') from a Gemini response that includes
+    retail estimate, offer, and notes. Uses section labels first, then a
+    two-amount fallback (retail, then 30% offer).
+    """
+    if not (quote_text or "").strip():
+        return None
+    text = quote_text.replace("\r\n", "\n")
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if re.search(r"share\s*bear", s, re.I) and re.search(r"offer", s, re.I):
+            m = _USD.search(s)
+            if m:
+                return m.group(0)
+    amounts = _USD.findall(text)
+    if len(amounts) >= 2:
+        return amounts[1]
+    if len(amounts) == 1:
+        return amounts[0]
+    return None
+
+
+def format_share_bear_offer_display(quote_text: str) -> str:
+    amt = extract_share_bear_offer_amount(quote_text)
+    if amt:
+        return amt
+    return "—"
 
 
 def build_quote_prompt(*, item_name: str, description: str, make: str, model: str, unknown_make_model: bool) -> str:

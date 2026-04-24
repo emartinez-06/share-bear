@@ -104,9 +104,16 @@
                             {{ form.unknown_make_model.label }}
                         </label>
                     </div>
-                    <button type="submit" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 px-8 py-3.5 rounded-xl transition-opacity">
-                        Get my quote
-                    </button>
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 pt-1">
+                        <button type="submit" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 px-8 py-3.5 rounded-xl transition-opacity">
+                            Get my quote
+                        </button>
+                        {% if dev_success_preview %}
+                        <a href="{% url 'ai_quote_dev_success' %}" class="inline-flex justify-center items-center text-sm font-semibold font-body text-amber-900 bg-amber-100 border border-amber-300/80 px-4 py-2.5 rounded-xl hover:bg-amber-200/80 transition-colors">
+                            Dev: preview success screen
+                        </a>
+                        {% endif %}
+                    </div>
                 </form>
             </div>
         </section>
