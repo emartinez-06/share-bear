@@ -1,0 +1,159 @@
+{% extends "base_auth.html" %}
+{% block title %}Sign In — SHARE Bear{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex">
+
+    <!-- Left Panel: Brand -->
+    <div class="hidden lg:flex lg:w-5/12 xl:w-2/5 bg-primary flex-col justify-between p-12 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-30 pointer-events-none">
+            <svg class="w-full h-full" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)"/>
+                <circle cx="500" cy="100" r="220" fill="rgba(254,183,26,0.10)"/>
+                <circle cx="50" cy="800" r="160" fill="rgba(255,255,255,0.04)"/>
+                <circle cx="300" cy="450" r="300" fill="rgba(254,183,26,0.05)"/>
+            </svg>
+        </div>
+
+        <div class="relative z-10 flex items-center gap-3">
+            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-9 h-9 rounded-lg object-cover">
+            <span class="font-display font-bold text-xl tracking-tightest text-on-primary">SHARE Bear</span>
+        </div>
+
+        <div class="relative z-10">
+            <h1 class="font-display font-bold text-4xl xl:text-5xl text-on-primary leading-tight tracking-tightest mb-6">
+                The circular marketplace for Baylor students.
+            </h1>
+            <p class="text-on-primary/60 font-body text-lg leading-relaxed mb-10">
+                Buy certified gear from peers. Sell yours directly to us. Get paid the same day.
+            </p>
+            <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-on-secondary-container text-base">verified</span>
+                    </div>
+                    <span class="text-on-primary/80 font-body text-sm">Every item SHARE Bear Certified</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-on-secondary-container text-base">bolt</span>
+                    </div>
+                    <span class="text-on-primary/80 font-body text-sm">Instant cash offers — no waiting</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-on-secondary-container text-base">school</span>
+                    </div>
+                    <span class="text-on-primary/80 font-body text-sm">Baylor students only — verified &amp; safe</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative z-10 border-t border-on-primary/10 pt-8">
+            <p class="text-on-primary/40 text-xs font-body">© 2025 SHARE Bear · baylorshare.com</p>
+        </div>
+    </div>
+
+    <!-- Right Panel: Form -->
+    <div class="flex-1 flex flex-col items-center justify-center px-6 py-12 lg:px-16">
+
+        <a href="/" class="lg:hidden flex items-center gap-3 mb-10">
+            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+            <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+        </a>
+
+        <div class="w-full max-w-md fade-up">
+            <div class="mb-8">
+                <h2 class="font-display font-bold text-3xl text-primary tracking-tightest mb-2">Welcome back</h2>
+                <p class="text-on-surface-variant font-body">Sign in to your SHARE Bear account</p>
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                <span class="material-symbols-outlined text-red-500 text-xl shrink-0 mt-0.5">error</span>
+                <p class="text-red-700 text-sm font-body">{{ form.non_field_errors|first }}</p>
+            </div>
+            {% endif %}
+
+            {% for msg in messages %}
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                <span class="material-symbols-outlined text-emerald-600 text-xl shrink-0 mt-0.5">check_circle</span>
+                <p class="text-emerald-800 text-sm font-body">{{ msg }}</p>
+            </div>
+            {% endfor %}
+
+            <form method="post" action="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="space-y-5" novalidate>
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-sm font-semibold text-on-surface mb-1.5 font-body" for="id_username">Username</label>
+                    <input
+                        class="field-input {% if form.username.errors %}error{% endif %}"
+                        type="text"
+                        id="id_username"
+                        name="username"
+                        value="{{ form.username.value|default:'' }}"
+                        placeholder="your_username"
+                        autocomplete="username"
+                        autofocus
+                    >
+                    {% if form.username.errors %}
+                    <p class="mt-1.5 text-xs text-red-600 font-body">{{ form.username.errors|first }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-on-surface font-body block mb-1.5" for="id_password">Password</label>
+                    <div class="relative">
+                        <input
+                            class="field-input pr-12 {% if form.password.errors %}error{% endif %}"
+                            type="password"
+                            id="id_password"
+                            name="password"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                        >
+                        <button type="button" onclick="togglePassword('id_password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined text-xl">visibility</span>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                    <p class="mt-1.5 text-xs text-red-600 font-body">{{ form.password.errors|first }}</p>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="w-full bg-primary text-on-primary font-bold font-body py-3.5 rounded-xl hover:bg-primary-container active:scale-95 transition-all flex items-center justify-center gap-2 mt-2">
+                    Sign in
+                    <span class="material-symbols-outlined text-xl">arrow_forward</span>
+                </button>
+            </form>
+
+            <div class="mt-8 text-center">
+                <p class="text-on-surface-variant text-sm font-body">
+                    Don't have an account?
+                    <a href="{% url 'signup' %}" class="font-semibold text-primary hover:underline">Create one</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('.material-symbols-outlined');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility_off';
+    } else {
+        input.type = 'password';
+        icon.textContent = 'visibility';
+    }
+}
+</script>
+{% endblock %}

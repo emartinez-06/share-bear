@@ -176,3 +176,23 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 AUTH_USER_MODEL = 'users.User'
+
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Google Gemini (AI Quote)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '') or None
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
+
+# Supabase Storage (quote condition videos) — set SUPABASE_URL and service role in production.
+# Create bucket `quote-videos` (private) in the Supabase dashboard; uploads use the service role key.
+SUPABASE_URL = (os.environ.get('SUPABASE_URL', '') or '').rstrip('/')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '') or None
+SUPABASE_QUOTE_VIDEOS_BUCKET = os.environ.get('SUPABASE_QUOTE_VIDEOS_BUCKET', 'quote-videos')
+
+# Video uploads (acceptance) on the quote success page
+QUOTE_VIDEO_MAX_BYTES = int(os.environ.get('QUOTE_VIDEO_MAX_BYTES', str(100 * 1024 * 1024)))
+# Allow large multipart bodies for short MP4s / WebM
+FILE_UPLOAD_MAX_MEMORY_SIZE = min(QUOTE_VIDEO_MAX_BYTES, 100 * 1024 * 1024)
+DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE

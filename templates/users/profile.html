@@ -1,0 +1,119 @@
+{% extends "base_auth.html" %}
+{% block title %}My Account — SHARE Bear{% endblock %}
+
+{% block body %}
+<header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+    <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3">
+                <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+                <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+            </a>
+            <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
+            <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                {% if user.is_staff or user.is_superuser %}
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_quotes' %}">Admin Panel</a>
+                {% endif %}
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="scale-95 active:opacity-80 transition-all text-primary/60">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            {% if user.is_authenticated %}
+            <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+            <a href="{% url 'signup' %}" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="pt-28 pb-20 px-6 max-w-5xl mx-auto">
+
+    {% for msg in messages %}
+    <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center gap-3 fade-up">
+        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+        <p class="text-emerald-800 text-sm font-body font-medium">{{ msg }}</p>
+    </div>
+    {% endfor %}
+
+    <section class="fade-up max-w-xl mx-auto">
+        <h1 class="font-display font-bold text-2xl text-primary tracking-tightest mb-6">Account</h1>
+        <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Full name</p>
+                <p class="font-medium text-on-surface font-body text-sm">
+                    {% if user.first_name %}{{ user.first_name }} {{ user.last_name }}{% else %}—{% endif %}
+                </p>
+            </div>
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Username</p>
+                <p class="font-medium text-on-surface font-body text-sm">@{{ user.username }}</p>
+            </div>
+            <div class="px-5 py-4 border-b border-surface-container-high">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Graduation year</p>
+                <p class="font-medium text-on-surface font-body text-sm">{{ user.graduation_year|default:"—" }}</p>
+            </div>
+            <div class="px-5 py-4">
+                <p class="text-xs text-on-surface-variant font-body mb-0.5">Member since</p>
+                <p class="font-medium text-on-surface font-body text-sm">{{ user.date_joined|date:"F Y" }}</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="fade-up max-w-3xl mx-auto mt-12">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="font-display font-bold text-2xl text-primary tracking-tightest">Past AI Quotes</h2>
+            <a href="{% url 'ai_quote' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Get a new quote</a>
+        </div>
+
+        <div class="space-y-4">
+            {% for quote in quotes %}
+            <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="font-display font-bold text-lg tracking-tight text-on-surface">{{ quote.item_name }}</h3>
+                    <div class="text-right">
+                        <p class="text-xs text-on-surface-variant font-body">{{ quote.created_at|date:"M j, Y g:i A" }}</p>
+                        <a href="{% url 'ai_quote_success_detail' quote_id=quote.pk %}" class="text-xs font-semibold text-primary mt-1 inline-block hover:underline">View quote &amp; video</a>
+                    </div>
+                </div>
+                <p class="text-sm text-on-surface-variant font-body mb-3">{{ quote.description }}</p>
+                <div class="mb-3 text-xs text-on-surface-variant font-body">
+                    {% if quote.unknown_make_model %}
+                    Make/model: Unknown
+                    {% else %}
+                    Make/model: {{ quote.make|default:"—" }} / {{ quote.model|default:"—" }}
+                    {% endif %}
+                </div>
+                <div class="bg-surface-container rounded-lg p-4">
+                    <p class="text-xs text-on-surface-variant font-body font-semibold uppercase tracking-wide mb-1">SHARE Bear offer</p>
+                    <p class="text-2xl sm:text-3xl font-display font-bold text-primary tabular-nums">{{ quote.offer_display }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2 text-xs font-body">
+                        {% if quote.has_video %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">Video submitted</span>
+                        {% else %}
+                        <span class="text-on-surface-variant">No video yet</span>
+                        {% endif %}
+                        {% if quote.quote_accepted_by_admin %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 font-medium">Offer confirmed</span>
+                        {% elif quote.has_video %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-amber-50 text-amber-900 px-2 py-0.5 font-medium">Under review</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-6">
+                <p class="text-sm text-on-surface-variant font-body">You do not have any AI quotes yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock %}
