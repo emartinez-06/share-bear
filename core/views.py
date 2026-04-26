@@ -290,7 +290,14 @@ def admin_kanban_approve_view(request, quote_id: int):
         return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden('You do not have access to this page.')
-    messages.info(request, 'Approve action coming soon — no changes made.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if q.quote_accepted_by_admin:
+        messages.info(request, f'"{q.item_name}" is already approved.')
+        return redirect('admin_kanban')
+    q.quote_accepted_by_admin = True
+    q.quote_reviewed_at = timezone.now()
+    q.save(update_fields=['quote_accepted_by_admin', 'quote_reviewed_at'])
+    messages.success(request, f'Approved "{q.item_name}" for @{q.user.username}.')
     return redirect('admin_kanban')
 
 
@@ -300,5 +307,15 @@ def admin_kanban_pickup_view(request, quote_id: int):
         return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden('You do not have access to this page.')
-    messages.info(request, 'Mark as Picked Up coming soon — no changes made.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.quote_accepted_by_admin:
+        messages.error(request, f'"{q.item_name}" must be approved before it can be marked as picked up.')
+        return redirect('admin_kanban')
+    if q.picked_up:
+        messages.info(request, f'"{q.item_name}" is already marked as picked up.')
+        return redirect('admin_kanban')
+    q.picked_up = True
+    q.picked_up_at = timezone.now()
+    q.save(update_fields=['picked_up', 'picked_up_at'])
+    messages.success(request, f'"{q.item_name}" for @{q.user.username} marked as picked up.')
     return redirect('admin_kanban')
