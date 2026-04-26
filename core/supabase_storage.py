@@ -95,6 +95,8 @@ def create_signed_video_url(object_path: str, expires_in: int = 600) -> str | No
         return None
     if signed.startswith('http://') or signed.startswith('https://'):
         return signed
-    if signed.startswith('/'):
+    if signed.startswith('/storage/v1'):
         return f'{base}{signed}'
-    return f'{base}/storage/v1{signed}'
+    if signed.startswith('/'):
+        return f'{base}/storage/v1{signed}'
+    return f'{base}/storage/v1/{signed}'

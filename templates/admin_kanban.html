@@ -175,17 +175,19 @@
                 <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
             </div>
         </dl>
-        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}" class="space-y-4">
+        {% if q.has_video %}
+        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}">
             {% csrf_token %}
-            <div>
-                <label for="final-offer-awaiting-{{ q.pk }}" class="block text-sm font-medium text-on-surface mb-1">Confirmed buy-back (USD)</label>
-                <p class="text-xs text-on-surface-variant mb-2">Leave blank to use the offer above.</p>
-                <input id="final-offer-awaiting-{{ q.pk }}" name="final_offer" type="text" autocomplete="off" placeholder="e.g. 150 or $150" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
-            </div>
             <button type="submit" class="w-full font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-opacity">
                 Approve
             </button>
         </form>
+        {% else %}
+        <div class="w-full rounded-xl bg-surface-container px-5 py-3 text-sm text-on-surface-variant font-body text-center border border-outline-variant/30">
+            <span class="material-symbols-outlined text-base align-middle mr-1">upload</span>
+            Awaiting video upload before approval
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endfor %}
@@ -240,6 +242,12 @@
                 Mark as Picked Up
             </button>
         </form>
+        <form method="post" action="{% url 'admin_kanban_unapprove' quote_id=q.pk %}" class="mt-2">
+            {% csrf_token %}
+            <button type="submit" class="w-full text-sm font-semibold font-body text-on-surface-variant border border-outline-variant/50 px-5 py-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                Revert to Awaiting
+            </button>
+        </form>
     </div>
 </div>
 {% endfor %}
@@ -288,7 +296,12 @@
                 <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
             </div>
         </dl>
-        <p class="text-xs text-on-surface-variant font-body italic">This item has been picked up. No further actions required.</p>
+        <form method="post" action="{% url 'admin_kanban_unpickup' quote_id=q.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="w-full text-sm font-semibold font-body text-on-surface-variant border border-outline-variant/50 px-5 py-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                Revert to Approved
+            </button>
+        </form>
     </div>
 </div>
 {% endfor %}

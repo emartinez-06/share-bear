@@ -5,6 +5,8 @@ from core.views import (
     admin_accept_quote_view,
     admin_kanban_approve_view,
     admin_kanban_pickup_view,
+    admin_kanban_unapprove_view,
+    admin_kanban_unpickup_view,
     admin_kanban_view,
     admin_quotes_view,
     ai_quote_dev_success_view,
@@ -26,5 +28,7 @@ urlpatterns = [
     path('admin-dashboard/', admin_kanban_view, name='admin_kanban'),
     path('admin-dashboard/approve/<int:quote_id>/', admin_kanban_approve_view, name='admin_kanban_approve'),
     path('admin-dashboard/pickup/<int:quote_id>/', admin_kanban_pickup_view, name='admin_kanban_pickup'),
+    path('admin-dashboard/unapprove/<int:quote_id>/', admin_kanban_unapprove_view, name='admin_kanban_unapprove'),
+    path('admin-dashboard/unpickup/<int:quote_id>/', admin_kanban_unpickup_view, name='admin_kanban_unpickup'),
     path('accounts/', include('users.urls')),
 ]
