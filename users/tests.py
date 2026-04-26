@@ -88,3 +88,15 @@ class AuthFlowTests(TestCase):
     def test_logout_get_not_allowed(self):
         response = self.client.get('/accounts/logout/')
         self.assertEqual(response.status_code, 405)
+
+    def test_user_items_page_shows_logout_for_authenticated_user(self):
+        self.user_model.objects.create_user(
+            username='itemsuser',
+            email='items@test.example',
+            password='testpass123',
+        )
+        self.client.login(username='itemsuser', password='testpass123')
+        response = self.client.get('/accounts/items/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Log out')
+        self.assertContains(response, "action=\"/accounts/logout/\"")
