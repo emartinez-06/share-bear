@@ -183,7 +183,7 @@ LOGOUT_REDIRECT_URL = '/'
 
 # Google Gemini (AI Quote)
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '') or None
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
 
 # Supabase Storage (quote condition videos) — set SUPABASE_URL and service role in production.
 # Create bucket `quote-videos` (private) in the Supabase dashboard; uploads use the service role key.
