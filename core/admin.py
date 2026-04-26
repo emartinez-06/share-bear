@@ -1,6 +1,5 @@
 from django.contrib import admin
 
-from .gemini_quote import format_share_bear_offer_display
 from .models import AIQuote
 
 
@@ -22,8 +21,9 @@ class AIQuoteAdmin(admin.ModelAdmin):
         'quote_text',
         'video_path',
         'quote_reviewed_at',
+        'admin_confirmed_offer_display',
     )
 
     @admin.display(description='Buy-back offer')
     def offer(self, obj):
-        return format_share_bear_offer_display(obj.quote_text)
+        return obj.offer_display
