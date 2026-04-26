@@ -177,13 +177,18 @@
                 <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
-                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
-                <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
+                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
+                <dd class="min-w-0">{% if q.pickup_event_html_link %}<a href="{{ q.pickup_event_html_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open in Google</a><span class="block text-xs text-on-surface-variant font-mono mt-1">{% if q.google_event_id %}{{ q.google_event_id|truncatechars:64 }}{% endif %}</span>{% elif q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline break-all">Legacy booking link</a>{% else %}<span class="text-on-surface-variant">—</span>{% endif %}</dd>
             </div>
         </dl>
         {% if q.has_video %}
-        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}">
+        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}" class="space-y-4">
             {% csrf_token %}
+            <div>
+                <label for="final-offer-kanban-{{ q.pk }}" class="block text-sm font-medium text-on-surface mb-1">Confirmed buy-back (USD)</label>
+                <p class="text-xs text-on-surface-variant mb-2">Leave blank to use the offer above.</p>
+                <input id="final-offer-kanban-{{ q.pk }}" name="final_offer" type="text" autocomplete="off" placeholder="e.g. 150 or $150" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+            </div>
             <button type="submit" class="w-full font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-opacity">
                 Approve
             </button>
@@ -238,8 +243,8 @@
                 <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
-                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
-                <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
+                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
+                <dd class="min-w-0">{% if q.pickup_event_html_link %}<a href="{{ q.pickup_event_html_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open in Google</a><span class="block text-xs text-on-surface-variant font-mono mt-1">{% if q.google_event_id %}{{ q.google_event_id|truncatechars:64 }}{% endif %}</span>{% elif q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline break-all">Legacy booking</a>{% else %}<span class="text-on-surface-variant">—</span>{% endif %}</dd>
             </div>
         </dl>
         {% if q.approval_mailto_url %}
@@ -310,8 +315,8 @@
                 <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
-                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
-                <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
+                <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
+                <dd class="min-w-0">{% if q.pickup_event_html_link %}<a href="{{ q.pickup_event_html_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open in Google</a><span class="block text-xs text-on-surface-variant font-mono mt-1">{% if q.google_event_id %}{{ q.google_event_id|truncatechars:64 }}{% endif %}</span>{% elif q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline break-all">Legacy booking</a>{% else %}<span class="text-on-surface-variant">—</span>{% endif %}</dd>
             </div>
         </dl>
         <form method="post" action="{% url 'admin_kanban_unpickup' quote_id=q.pk %}">

@@ -41,3 +41,7 @@ ENV/
 .project
 .pydevproject
 .settings/
+
+# Secrets (local service account keys, etc.)
+share-494521-521ccfe4cf20.json
+

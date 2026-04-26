@@ -191,6 +191,49 @@ SUPABASE_URL = (os.environ.get('SUPABASE_URL', '') or '').rstrip('/')
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '') or None
 SUPABASE_QUOTE_VIDEOS_BUCKET = os.environ.get('SUPABASE_QUOTE_VIDEOS_BUCKET', 'quote-videos')
 
+# Google Calendar (pickup: preset weekly slots in app, events.insert on book; service account)
+# Share the destination calendar with the service account; enable Calendar API in GCP.
+def _env_csv(name: str) -> list[str]:
+    raw = (os.environ.get(name) or '').strip()
+    if not raw:
+        return []
+    return [p.strip() for p in raw.split(',') if p.strip()]
+
+
+def _load_pickup_weekly_slots() -> list[dict]:
+    """
+    Weekly recurring pickup windows. weekday: 0=Monday ... 6=Sunday (Python date.weekday()).
+
+    - Single slot: {"weekday": int, "start": "HH:MM", "end": "HH:MM"}.
+    - Hourly slots: {"weekday": int, "hourly": true, "first": "HH:MM", "last_start": "HH:MM"}
+      — one 1-hour block per hour from first through last_start (inclusive), e.g. 9–10 … 17–18.
+    """
+    raw = (os.environ.get('PICKUP_WEEKLY_SLOTS_JSON') or '').strip()
+    if raw:
+        import json
+
+        try:
+            data = json.loads(raw)
+            if isinstance(data, list) and data:
+                return data
+        except json.JSONDecodeError:
+            pass
+    # Default: Fri & Sat 9am–5pm hourly; Sun 12pm–5pm hourly (local GOOGLE_PICKUP_TIMEZONE)
+    return [
+        {'weekday': 4, 'hourly': True, 'first': '09:00', 'last_start': '17:00'},
+        {'weekday': 5, 'hourly': True, 'first': '09:00', 'last_start': '17:00'},
+        {'weekday': 6, 'hourly': True, 'first': '12:00', 'last_start': '17:00'},
+    ]
+
+
+GOOGLE_SERVICE_ACCOUNT_KEY_PATH = (os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY_PATH') or '').strip() or None
+# Comma-separated calendar ID where new pickup events are created (e.g. sharebearhelp@gmail.com)
+GOOGLE_SLOT_SOURCE_CALENDAR_IDS = _env_csv('GOOGLE_SLOT_SOURCE_CALENDAR_IDS')
+GOOGLE_PICKUP_SLOT_DAYS_AHEAD = int(os.environ.get('GOOGLE_PICKUP_SLOT_DAYS_AHEAD', '30'))
+GOOGLE_PICKUP_TIMEZONE = (os.environ.get('GOOGLE_PICKUP_TIMEZONE') or 'America/Chicago').strip()
+PICKUP_WEEKLY_SLOT_DEFINITIONS = _load_pickup_weekly_slots()
+PICKUP_EVENT_TITLE = (os.environ.get('PICKUP_EVENT_TITLE') or 'SHARE Bear — Item pickup').strip()
+
 # Video uploads (acceptance) on the quote success page
 QUOTE_VIDEO_MAX_BYTES = int(os.environ.get('QUOTE_VIDEO_MAX_BYTES', str(100 * 1024 * 1024)))
 # Allow large multipart bodies for short MP4s / WebM

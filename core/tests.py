@@ -204,3 +204,156 @@ class AdminAcceptQuoteFormTests(TestCase):
         f2 = AdminAcceptQuoteForm({'final_offer': '50'})
         self.assertTrue(f2.is_valid())
         self.assertEqual(f2.cleaned_data['final_offer'], '$50')
+
+
+class ProfileAttachPickupViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user('pickup1', 'p1@t.e', 'pw1')
+        cls.user2 = User.objects.create_user('other', 'o@t.e', 'pw2')
+        cls.q_ok = AIQuote.objects.create(
+            user=cls.user,
+            item_name='Guitar',
+            description='d',
+            quote_text='- SHARE Bear offer (USD): $100\n',
+            has_video=True,
+            video_path='1/1/x',
+            quote_accepted_by_admin=True,
+        )
+        cls.q_other = AIQuote.objects.create(
+            user=cls.user2,
+            item_name='Other',
+            description='d',
+            quote_text='- SHARE Bear offer (USD): $50\n',
+            has_video=True,
+            video_path='1/1/y',
+            quote_accepted_by_admin=True,
+        )
+
+    @override_settings(
+        GOOGLE_SERVICE_ACCOUNT_KEY_PATH='',
+        GOOGLE_SLOT_SOURCE_CALENDAR_IDS=[],
+    )
+    def test_profile_without_calendar_config(self):
+        self.client.login(username='pickup1', password='pw1')
+        r = self.client.get('/accounts/profile/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Calendar pickup is not configured')
+
+    @patch('users.views.is_pickup_calendar_configured', return_value=True)
+    @patch('users.views.resolve_available_preset_slot')
+    @patch('users.views.create_pickup_event')
+    def test_attach_saves_event_ids(self, m_create, m_res, m_cfg):
+        from datetime import datetime, timezone
+
+        from core.google_calendar import make_slot_post_key
+
+        st = datetime(2026, 6, 15, 15, 0, tzinfo=timezone.utc)
+        en = datetime(2026, 6, 15, 15, 30, tzinfo=timezone.utc)
+        m_res.return_value = (st, en)
+        m_create.return_value = {
+            'id': 'evt123',
+            'htmlLink': 'https://calendar.google.com/calendar/event?e=abc',
+        }
+        self.client.login(username='pickup1', password='pw1')
+        key = make_slot_post_key('cal@example.com', st, en)
+        r = self.client.post(
+            '/accounts/profile/pickup/attach/',
+            {
+                'slot_key': key,
+                'quote_ids': [str(self.q_ok.pk)],
+            },
+        )
+        self.assertEqual(r.status_code, 302)
+        self.q_ok.refresh_from_db()
+        self.assertEqual(self.q_ok.google_calendar_id, 'cal@example.com')
+        self.assertEqual(self.q_ok.google_event_id, 'evt123')
+        self.assertIn('calendar.google', self.q_ok.pickup_event_html_link)
+        m_create.assert_called_once()
+
+    @patch('users.views.is_pickup_calendar_configured', return_value=True)
+    @patch('users.views.resolve_available_preset_slot')
+    @patch('users.views.create_pickup_event')
+    def test_cannot_attach_other_users_quote(
+        self, m_create, m_res, m_cfg
+    ):
+        from datetime import datetime, timezone
+
+        from core.google_calendar import make_slot_post_key
+
+        st = datetime(2026, 6, 15, 15, 0, tzinfo=timezone.utc)
+        en = datetime(2026, 6, 15, 15, 30, tzinfo=timezone.utc)
+        m_res.return_value = (st, en)
+        m_create.return_value = {
+            'id': 'e',
+            'htmlLink': 'https://x',
+        }
+        self.client.login(username='pickup1', password='pw1')
+        r = self.client.post(
+            '/accounts/profile/pickup/attach/',
+            {
+                'slot_key': make_slot_post_key('c@x', st, en),
+                'quote_ids': [str(self.q_other.pk)],
+            },
+        )
+        self.assertEqual(r.status_code, 302)
+        self.q_other.refresh_from_db()
+        self.assertEqual(self.q_other.google_event_id, '')
+
+    @override_settings(
+        GOOGLE_SERVICE_ACCOUNT_KEY_PATH='',
+        GOOGLE_SLOT_SOURCE_CALENDAR_IDS=[],
+    )
+    def test_attach_rejects_without_config(self):
+        self.client.login(username='pickup1', password='pw1')
+        r = self.client.post(
+            '/accounts/profile/pickup/attach/',
+            {
+                'slot_key': 'a###b',
+                'quote_ids': [str(self.q_ok.pk)],
+            },
+        )
+        self.assertEqual(r.status_code, 302)
+        self.q_ok.refresh_from_db()
+        self.assertEqual(self.q_ok.google_event_id, '')
+
+
+class PickupHourlySlotDefinitionTests(TestCase):
+    @override_settings(
+        PICKUP_WEEKLY_SLOT_DEFINITIONS=[
+            {'weekday': 4, 'hourly': True, 'first': '09:00', 'last_start': '17:00'},
+        ],
+        GOOGLE_PICKUP_TIMEZONE='America/Chicago',
+    )
+    def test_friday_nine_one_hour_blocks(self):
+        from core.google_calendar import _generate_all_preset_instances
+
+        tmin = datetime(2026, 1, 1, 6, 0, tzinfo=timezone.utc)
+        tmax = datetime(2026, 1, 3, 6, 0, tzinfo=timezone.utc)
+        inst = _generate_all_preset_instances(time_min=tmin, time_max=tmax)
+        friday = date(2026, 1, 2)
+        tz = ZoneInfo('America/Chicago')
+        on_friday = [p for p in inst if p[0].astimezone(tz).date() == friday]
+        self.assertEqual(len(on_friday), 9)
+        self.assertEqual(on_friday[0][0].astimezone(tz).hour, 9)
+        self.assertEqual(on_friday[-1][0].astimezone(tz).hour, 17)
+
+    @override_settings(
+        PICKUP_WEEKLY_SLOT_DEFINITIONS=[
+            {'weekday': 6, 'hourly': True, 'first': '12:00', 'last_start': '17:00'},
+        ],
+        GOOGLE_PICKUP_TIMEZONE='America/Chicago',
+    )
+    def test_sunday_six_one_hour_blocks(self):
+        from core.google_calendar import _generate_all_preset_instances
+
+        tmin = datetime(2026, 1, 3, 6, 0, tzinfo=timezone.utc)
+        tmax = datetime(2026, 1, 5, 6, 0, tzinfo=timezone.utc)
+        inst = _generate_all_preset_instances(time_min=tmin, time_max=tmax)
+        sun = date(2026, 1, 4)
+        tz = ZoneInfo('America/Chicago')
+        on_sun = [p for p in inst if p[0].astimezone(tz).date() == sun]
+        self.assertEqual(len(on_sun), 6)
+        self.assertEqual(on_sun[0][0].astimezone(tz).hour, 12)
+        self.assertEqual(on_sun[-1][0].astimezone(tz).hour, 17)
