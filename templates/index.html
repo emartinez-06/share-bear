@@ -116,6 +116,9 @@
                         {% if user.is_staff or user.is_superuser %}
                         <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
                         {% endif %}
+                        {% if user.is_authenticated %}
+                        <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'user_items' %}">My Items</a>
+                        {% endif %}
                     </nav>
                 </div>
                 <div class="flex items-center gap-6">

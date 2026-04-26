@@ -239,3 +239,9 @@ QUOTE_VIDEO_MAX_BYTES = int(os.environ.get('QUOTE_VIDEO_MAX_BYTES', str(100 * 10
 # Allow large multipart bodies for short MP4s / WebM
 FILE_UPLOAD_MAX_MEMORY_SIZE = min(QUOTE_VIDEO_MAX_BYTES, 100 * 1024 * 1024)
 DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
+
+# User-facing Google appointment scheduling link for pickup booking.
+GOOGLE_BOOKING_URL = os.environ.get(
+    'GOOGLE_BOOKING_URL',
+    'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1OUNxC7H1v2XNI-xTz7-Zemzbl9TdrB60W32_29KBwPnV7QBrSzJ5LqWcwA7wAzzjRCi7ReD54?gv=true',
+)
