@@ -54,6 +54,7 @@ def login_view(request):
     return render(request, 'users/login.html', {'form': form})
 
 
+@require_http_methods(['POST'])
 def logout_view(request):
     logout(request)
     return redirect('home')
