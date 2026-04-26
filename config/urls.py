@@ -3,6 +3,9 @@ from django.urls import include, path
 
 from core.views import (
     admin_accept_quote_view,
+    admin_kanban_approve_view,
+    admin_kanban_pickup_view,
+    admin_kanban_view,
     admin_quotes_view,
     ai_quote_dev_success_view,
     ai_quote_success_detail_view,
@@ -20,5 +23,8 @@ urlpatterns = [
     path('ai-quote/complete/<int:quote_id>/video/', quote_video_upload_view, name='quote_video_upload'),
     path('admin-quotes/', admin_quotes_view, name='admin_quotes'),
     path('admin-quotes/accept/<int:quote_id>/', admin_accept_quote_view, name='admin_accept_quote'),
+    path('admin-dashboard/', admin_kanban_view, name='admin_kanban'),
+    path('admin-dashboard/approve/<int:quote_id>/', admin_kanban_approve_view, name='admin_kanban_approve'),
+    path('admin-dashboard/pickup/<int:quote_id>/', admin_kanban_pickup_view, name='admin_kanban_pickup'),
     path('accounts/', include('users.urls')),
 ]

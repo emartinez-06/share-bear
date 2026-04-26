@@ -102,3 +102,15 @@ class QuoteVideoForm(forms.Form):
         ):
             raise forms.ValidationError('Please upload a video (MP4, WebM, or MOV).')
         return f
+
+
+class BookingLinkForm(forms.Form):
+    booking_link = forms.URLField(
+        label='Microsoft Booking link',
+        max_length=1024,
+        required=False,
+        widget=forms.URLInput(attrs={
+            'class': 'field-input',
+            'placeholder': 'https://outlook.office365.com/book/...',
+        }),
+    )

@@ -30,6 +30,16 @@ class AIQuote(models.Model):
         help_text='Set when an admin has reviewed the video and accepted the buy-back offer.',
     )
     quote_reviewed_at = models.DateTimeField(null=True, blank=True)
+    booking_link = models.URLField(
+        max_length=1024,
+        blank=True,
+        help_text='Microsoft Booking link submitted by the user.',
+    )
+    picked_up = models.BooleanField(
+        default=False,
+        help_text='Set when an admin marks the item as physically picked up.',
+    )
+    picked_up_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
