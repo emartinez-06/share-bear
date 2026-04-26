@@ -307,6 +307,9 @@ def admin_kanban_approve_view(request, quote_id: int):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.has_video:
+        messages.error(request, f'Cannot approve "{q.item_name}" — the user has not uploaded a video yet.')
+        return redirect('admin_kanban')
     if q.quote_accepted_by_admin:
         messages.info(request, f'"{q.item_name}" is already approved.')
         return redirect('admin_kanban')
@@ -334,4 +337,41 @@ def admin_kanban_pickup_view(request, quote_id: int):
     q.picked_up_at = timezone.now()
     q.save(update_fields=['picked_up', 'picked_up_at'])
     messages.success(request, f'"{q.item_name}" for @{q.user.username} marked as picked up.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_unapprove_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.quote_accepted_by_admin:
+        messages.info(request, f'"{q.item_name}" has not been approved yet.')
+        return redirect('admin_kanban')
+    if q.picked_up:
+        messages.error(request, f'Revert "{q.item_name}" from Picked Up to Approved first.')
+        return redirect('admin_kanban')
+    q.quote_accepted_by_admin = False
+    q.quote_reviewed_at = None
+    q.save(update_fields=['quote_accepted_by_admin', 'quote_reviewed_at'])
+    messages.success(request, f'Reverted "{q.item_name}" back to Awaiting.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_unpickup_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.picked_up:
+        messages.info(request, f'"{q.item_name}" is not marked as picked up.')
+        return redirect('admin_kanban')
+    q.picked_up = False
+    q.picked_up_at = None
+    q.save(update_fields=['picked_up', 'picked_up_at'])
+    messages.success(request, f'Reverted "{q.item_name}" back to Approved.')
     return redirect('admin_kanban')
