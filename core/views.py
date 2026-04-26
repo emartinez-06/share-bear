@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import AIQuoteForm, QuoteVideoForm
+from .forms import AIQuoteForm, BookingLinkForm, QuoteVideoForm
 from .gemini_quote import build_quote_prompt, format_share_bear_offer_display, get_quote_from_gemini
 from .models import AIQuote
 from .supabase_storage import create_signed_video_url, is_storage_configured, upload_quote_video
@@ -173,10 +173,20 @@ def ai_quote_view(request):
 
 
 @login_required
-@require_http_methods(['GET', 'HEAD'])
+@require_http_methods(['GET', 'HEAD', 'POST'])
 def ai_quote_success_detail_view(request, quote_id: int):
     """Quote success / acceptance page for a stored AI quote (signed-in only)."""
     quote = get_object_or_404(AIQuote, pk=quote_id, user=request.user)
+    if request.method == 'POST':
+        form = BookingLinkForm(request.POST)
+        if form.is_valid():
+            link = form.cleaned_data['booking_link'].strip()
+            if link:
+                quote.booking_link = link
+                quote.save(update_fields=['booking_link'])
+                messages.success(request, 'Booking link saved.')
+        return redirect('ai_quote_success_detail', quote_id=quote.pk)
+    form = BookingLinkForm(initial={'booking_link': quote.booking_link})
     celebrate = request.GET.get('celebrate') in ('1', 'true', 'yes')
     return render(
         request,
@@ -187,6 +197,7 @@ def ai_quote_success_detail_view(request, quote_id: int):
             'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
             'dev_preview': False,
             'quote': quote,
+            'booking_link_form': form,
             'video_upload_configured': is_storage_configured(),
             'show_confetti': celebrate,
             'quote_video_max_mb': settings.QUOTE_VIDEO_MAX_BYTES // (1024 * 1024),
@@ -238,6 +249,56 @@ def quote_video_upload_view(request, quote_id: int):
     quote.save(update_fields=['has_video', 'video_path'])
     messages.success(
         request,
-        'Video received. Your offer is pending review—SHARE Bear will confirm once we’ve watched it.',
+        "Video received. Your offer is pending review—SHARE Bear will confirm once we've watched it.",
     )
     return redirect('ai_quote_success_detail', quote_id=quote.pk)
+
+
+def admin_kanban_view(request):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+
+    all_quotes = list(AIQuote.objects.select_related('user').order_by('-created_at'))
+    awaiting, approved, picked_up_list = [], [], []
+    for q in all_quotes:
+        q.signed_video_url = None
+        if q.has_video and q.video_path:
+            q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
+        if q.picked_up:
+            picked_up_list.append(q)
+        elif q.quote_accepted_by_admin:
+            approved.append(q)
+        else:
+            awaiting.append(q)
+    return render(
+        request,
+        'admin_kanban.html',
+        {
+            'awaiting': awaiting,
+            'approved': approved,
+            'picked_up': picked_up_list,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )
+
+
+@require_http_methods(['POST'])
+def admin_kanban_approve_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    messages.info(request, 'Approve action coming soon — no changes made.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_pickup_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    messages.info(request, 'Mark as Picked Up coming soon — no changes made.')
+    return redirect('admin_kanban')

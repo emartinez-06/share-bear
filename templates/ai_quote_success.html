@@ -17,7 +17,7 @@
                     <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
                     <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
                     {% if user.is_staff or user.is_superuser %}
-                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_quotes' %}">Admin Panel</a>
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
                     {% endif %}
                 </nav>
             </div>
@@ -97,6 +97,38 @@
                 {% endif %}
                 {% endif %}
             </div>
+
+            {% if booking_link_form %}
+            <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7">
+                <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">
+                    <span class="material-symbols-outlined align-middle text-primary mr-1 text-xl" style="vertical-align:-4px">calendar_month</span>
+                    Schedule your pickup
+                </h2>
+                <p class="text-sm text-on-surface-variant font-body leading-relaxed mb-5">
+                    Book a time to drop off your item. Paste your Microsoft Booking link below so the SHARE Bear team can confirm your slot.
+                </p>
+                {% if quote.booking_link %}
+                <p class="text-sm font-body mb-4">
+                    <span class="inline-flex items-center gap-1.5 font-medium text-on-surface">
+                        <span class="material-symbols-outlined text-primary text-base">check_circle</span>
+                        Booking link saved
+                    </span>
+                    — <a href="{{ quote.booking_link }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline text-xs break-all">{{ quote.booking_link }}</a>
+                </p>
+                {% endif %}
+                <form method="post" action="{% url 'ai_quote_success_detail' quote_id=quote.pk %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="id_booking_link" class="block text-sm font-semibold text-on-surface mb-1.5">{{ booking_link_form.booking_link.label }}</label>
+                        {{ booking_link_form.booking_link }}
+                        {% if booking_link_form.booking_link.errors %}<p class="text-red-600 text-xs mt-1">{{ booking_link_form.booking_link.errors.0 }}</p>{% endif %}
+                    </div>
+                    <button type="submit" class="font-display font-bold text-on-primary bg-primary px-6 py-3 rounded-xl hover:opacity-90 transition-opacity w-full sm:w-auto">
+                        {% if quote.booking_link %}Update booking link{% else %}Save booking link{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
             {% elif dev_preview %}
             <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7 opacity-[0.98]">
                 <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">Accept this offer</h2>
