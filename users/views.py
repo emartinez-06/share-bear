@@ -197,3 +197,24 @@ def profile_attach_pickup_view(request):
         f'Pickup scheduled for {len(quotes)} item(s). You can open the event in Google Calendar from the links below.',
     )
     return redirect('profile')
+
+
+@login_required
+def user_items_view(request):
+    quotes = list(AIQuote.objects.filter(user=request.user).order_by('-created_at'))
+    approved_pickup_quotes = [
+        q
+        for q in quotes
+        if q.quote_accepted_by_admin
+        and not q.picked_up
+        and not (q.google_event_id or '').strip()
+    ]
+    return render(
+        request,
+        'user_items.html',
+        {
+            'quotes': quotes,
+            'approved_pickup_quotes': approved_pickup_quotes,
+            'google_booking_url': settings.GOOGLE_BOOKING_URL,
+        },
+    )

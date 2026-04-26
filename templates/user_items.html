@@ -1,0 +1,272 @@
+{% extends "base_auth.html" %}
+{% block title %}My Items — SHARE Bear{% endblock %}
+
+{% block body %}
+<header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+    <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3">
+                <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+                <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+            </a>
+            <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
+            <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                {% if user.is_staff or user.is_superuser %}
+                <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
+                {% endif %}
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="scale-95 active:opacity-80 transition-all text-primary/60">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            {% if user.is_authenticated %}
+            <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+            <a href="{% url 'signup' %}" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="pt-28 pb-20 px-6 max-w-5xl mx-auto">
+    {% for msg in messages %}
+    <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center gap-3 fade-up">
+        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+        <p class="text-emerald-800 text-sm font-body font-medium">{{ msg }}</p>
+    </div>
+    {% endfor %}
+
+    <section class="fade-up max-w-3xl mx-auto mt-2">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="font-display font-bold text-2xl text-primary tracking-tightest">My Items</h1>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'profile' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Account</a>
+                <a href="{% url 'ai_quote' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Get a new quote</a>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-5 sm:p-6 border border-surface-container-high mb-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="font-display font-bold text-lg text-on-surface">Schedule Pickup</h2>
+                    {% if approved_pickup_quotes %}
+                    <p class="text-sm text-on-surface-variant font-body mt-1">Choose approved items and open Google Booking to pick a pickup time.</p>
+                    {% else %}
+                    <p class="text-sm text-on-surface-variant font-body mt-1">No approved items are ready for pickup yet. Once approved, they will appear here.</p>
+                    {% endif %}
+                </div>
+                <button
+                    id="open-pickup-modal"
+                    type="button"
+                    class="text-sm font-semibold font-body px-4 py-2 rounded-full transition-all {% if approved_pickup_quotes %}bg-primary text-on-primary hover:bg-primary-container{% else %}bg-surface-container text-on-surface-variant cursor-not-allowed{% endif %}"
+                    {% if not approved_pickup_quotes %}disabled aria-disabled="true"{% endif %}
+                >
+                    Book pickup time
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            {% for quote in quotes %}
+            <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="font-display font-bold text-lg tracking-tight text-on-surface">{{ quote.item_name }}</h3>
+                    <div class="text-right">
+                        <p class="text-xs text-on-surface-variant font-body">{{ quote.created_at|date:"M j, Y g:i A" }}</p>
+                        <a href="{% url 'ai_quote_success_detail' quote_id=quote.pk %}" class="text-xs font-semibold text-primary mt-1 inline-block hover:underline">View quote &amp; video</a>
+                    </div>
+                </div>
+                <p class="text-sm text-on-surface-variant font-body mb-3">{{ quote.description }}</p>
+                <div class="mb-3 text-xs text-on-surface-variant font-body">
+                    {% if quote.unknown_make_model %}
+                    Make/model: Unknown
+                    {% else %}
+                    Make/model: {{ quote.make|default:"-" }} / {{ quote.model|default:"-" }}
+                    {% endif %}
+                </div>
+                <div class="bg-surface-container rounded-lg p-4">
+                    <p class="text-xs text-on-surface-variant font-body font-semibold uppercase tracking-wide mb-1">SHARE Bear offer</p>
+                    <p class="text-2xl sm:text-3xl font-display font-bold text-primary tabular-nums">{{ quote.offer_display }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2 text-xs font-body">
+                        {% if quote.has_video %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">Video submitted</span>
+                        {% else %}
+                        <span class="text-on-surface-variant">No video yet</span>
+                        {% endif %}
+                        {% if quote.picked_up %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-slate-100 text-slate-900 px-2 py-0.5 font-medium">Picked up</span>
+                        {% elif quote.quote_accepted_by_admin %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 font-medium">Offer confirmed</span>
+                        {% elif quote.has_video %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-amber-50 text-amber-900 px-2 py-0.5 font-medium">Under review</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-6">
+                <p class="text-sm text-on-surface-variant font-body">You do not have any items yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+
+<div id="pickup-modal" class="fixed inset-0 z-[70] hidden" aria-hidden="true">
+    <div id="pickup-modal-overlay" class="absolute inset-0 bg-black/45"></div>
+    <div class="absolute inset-0 p-4 sm:p-8 flex items-end sm:items-center justify-center">
+        <section class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-container-lowest ambient-shadow border border-surface-container-high">
+            <header class="px-6 py-5 border-b border-surface-container-high flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="font-display font-bold text-xl text-primary tracking-tight">Book Approved Pickup Items</h3>
+                    <p class="text-sm text-on-surface-variant font-body mt-1">Select the items you want picked up at your booking time.</p>
+                </div>
+                <button id="close-pickup-modal" type="button" class="text-on-surface-variant hover:text-on-surface" aria-label="Close pickup modal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </header>
+
+            <div class="px-6 py-5">
+                <div class="space-y-2">
+                    {% for quote in approved_pickup_quotes %}
+                    <label class="flex items-start gap-3 bg-surface-container rounded-xl p-3 border border-surface-container-high cursor-pointer hover:border-primary/30 transition-colors">
+                        <input
+                            type="checkbox"
+                            class="pickup-item-checkbox rounded border-outline-variant text-primary focus:ring-primary mt-1"
+                            value="{{ quote.item_name|escape }}"
+                            data-offer="{{ quote.offer_display|escape }}"
+                        >
+                        <span class="flex-1">
+                            <span class="font-medium text-on-surface text-sm font-body block">{{ quote.item_name }}</span>
+                            <span class="text-xs text-on-surface-variant font-body block mt-0.5">Offer: {{ quote.offer_display }} {% if quote.quote_reviewed_at %}- Approved {{ quote.quote_reviewed_at|date:"M j, Y" }}{% endif %}</span>
+                        </span>
+                    </label>
+                    {% empty %}
+                    <p class="text-sm text-on-surface-variant font-body">No approved items available for pickup.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-5 bg-surface-container rounded-xl p-4 border border-surface-container-high">
+                    <p class="text-xs text-on-surface-variant font-semibold uppercase tracking-wide mb-2">Selected items for pickup</p>
+                    <textarea id="pickup-selected-summary" class="field-input min-h-[96px]" readonly placeholder="Select one or more approved items above."></textarea>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button id="copy-selected-items" type="button" class="text-xs font-semibold font-body text-primary px-3 py-1.5 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">
+                            Copy selected items
+                        </button>
+                        <span id="copy-feedback" class="text-xs text-emerald-700 font-body hidden">Copied</span>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap items-center justify-end gap-3">
+                    <button id="cancel-pickup-modal" type="button" class="text-sm font-semibold font-body text-on-surface-variant px-4 py-2 rounded-full border border-outline-variant hover:bg-surface-container transition-colors">
+                        Cancel
+                    </button>
+                    <a
+                        id="open-google-booking"
+                        href="{{ google_booking_url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sm font-semibold font-body px-4 py-2 rounded-full bg-primary text-on-primary opacity-50 pointer-events-none"
+                        aria-disabled="true"
+                    >
+                        Open Google Booking
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const openBtn = document.getElementById('open-pickup-modal');
+        const modal = document.getElementById('pickup-modal');
+        const overlay = document.getElementById('pickup-modal-overlay');
+        const closeBtn = document.getElementById('close-pickup-modal');
+        const cancelBtn = document.getElementById('cancel-pickup-modal');
+        const bookingBtn = document.getElementById('open-google-booking');
+        const checkboxes = Array.from(document.querySelectorAll('.pickup-item-checkbox'));
+        const summaryField = document.getElementById('pickup-selected-summary');
+        const copyBtn = document.getElementById('copy-selected-items');
+        const copyFeedback = document.getElementById('copy-feedback');
+
+        if (!openBtn || !modal || !summaryField || !bookingBtn) {
+            return;
+        }
+
+        const openModal = function() {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        const closeModal = function() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        const updateSelectedSummary = function() {
+            const selected = checkboxes
+                .filter(function(input) { return input.checked; })
+                .map(function(input) {
+                    const offer = input.getAttribute('data-offer') || '';
+                    return '- ' + input.value + (offer ? ' (' + offer + ')' : '');
+                });
+
+            summaryField.value = selected.length ? selected.join('\n') : '';
+
+            if (selected.length > 0) {
+                bookingBtn.classList.remove('opacity-50', 'pointer-events-none');
+                bookingBtn.removeAttribute('aria-disabled');
+            } else {
+                bookingBtn.classList.add('opacity-50', 'pointer-events-none');
+                bookingBtn.setAttribute('aria-disabled', 'true');
+            }
+        };
+
+        openBtn.addEventListener('click', openModal);
+        if (overlay) {
+            overlay.addEventListener('click', closeModal);
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeModal);
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
+        checkboxes.forEach(function(input) {
+            input.addEventListener('change', updateSelectedSummary);
+        });
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                if (!summaryField.value.trim()) {
+                    return;
+                }
+                navigator.clipboard.writeText(summaryField.value).then(function() {
+                    copyFeedback.classList.remove('hidden');
+                    window.setTimeout(function() {
+                        copyFeedback.classList.add('hidden');
+                    }, 1400);
+                });
+            });
+        }
+
+        updateSelectedSummary();
+    })();
+</script>
+{% endblock %}
