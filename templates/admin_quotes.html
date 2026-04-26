@@ -67,13 +67,21 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-5 py-4 text-sm text-on-surface font-semibold tabular-nums whitespace-nowrap">{{ quote.offer_display }}</td>
-                                <td class="px-5 py-4 text-sm text-on-surface">
+                                <td class="px-5 py-4 text-sm text-on-surface max-w-sm">
                                     {% if quote.has_video and quote.signed_video_url %}
-                                    <a href="{{ quote.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline inline-flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-base">play_circle</span> Watch
-                                    </a>
+                                    <details class="max-w-[min(100%,22rem)]">
+                                        <summary class="cursor-pointer font-medium text-primary hover:underline inline-flex items-center gap-1 list-none [&::-webkit-details-marker]:hidden">
+                                            <span class="material-symbols-outlined text-base">play_circle</span> Watch
+                                        </summary>
+                                        <div class="mt-2 rounded-lg overflow-hidden bg-black/90 aspect-video w-full max-h-48">
+                                            <video class="w-full h-full object-contain" controls playsinline preload="metadata">
+                                                <source src="{{ quote.signed_video_url }}" type="{{ quote.video_mime }}">
+                                            </video>
+                                        </div>
+                                        <a href="{{ quote.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="text-xs text-primary font-medium hover:underline mt-1.5 inline-block">Open in new tab</a>
+                                    </details>
                                     {% elif quote.has_video %}
-                                    <span class="text-on-surface-variant text-xs" title="signing URL may be misconfigured">Video on file (open in dashboard)</span>
+                                    <span class="text-on-surface-variant text-xs" title="signing URL may be misconfigured">Video on file (URL unavailable)</span>
                                     {% else %}
                                     <span class="text-on-surface-variant">—</span>
                                     {% endif %}
@@ -85,9 +93,13 @@
                                     <p class="text-xs text-on-surface-variant mt-1">{{ quote.quote_reviewed_at|date:"M j, Y g:i A" }}</p>
                                     {% endif %}
                                     {% elif quote.has_video %}
-                                    <form method="post" action="{% url 'admin_accept_quote' quote_id=quote.pk %}" class="inline">
+                                    <form method="post" action="{% url 'admin_accept_quote' quote_id=quote.pk %}" class="space-y-2 w-44 max-w-full">
                                         {% csrf_token %}
-                                        <button type="submit" class="text-sm font-semibold font-body text-on-primary bg-primary px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
+                                        <div>
+                                            <label class="block text-xs text-on-surface-variant mb-0.5" for="final-offer-quotes-{{ quote.pk }}">Confirm $ (optional)</label>
+                                            <input id="final-offer-quotes-{{ quote.pk }}" name="final_offer" type="text" autocomplete="off" placeholder="e.g. 150" class="w-full text-sm rounded-md border border-outline-variant/40 bg-surface-container px-2 py-1.5 text-on-surface font-body focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                                        </div>
+                                        <button type="submit" class="w-full text-sm font-semibold font-body text-on-primary bg-primary px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
                                             Accept offer
                                         </button>
                                     </form>

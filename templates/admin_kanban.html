@@ -137,9 +137,9 @@
 <div id="modal-{{ q.pk }}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ q.pk }}"
      class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modal-{{ q.pk }}')"></div>
-    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
         <button type="button" onclick="closeModal('modal-{{ q.pk }}')"
-                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors">
+                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20">
             <span class="material-symbols-outlined">close</span>
         </button>
         <div class="mb-5">
@@ -148,6 +148,18 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
+        {% if q.has_video and q.signed_video_url %}
+        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
+                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
+            </video>
+        </div>
+        <p class="text-xs text-on-surface-variant font-body mb-5">
+            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
+        </p>
+        {% elif q.has_video %}
+        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
+        {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
@@ -156,15 +168,20 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if q.has_video and q.signed_video_url %}<a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline"><span class="material-symbols-outlined text-base">play_circle</span> Watch video</a>{% elif q.has_video %}<span class="text-on-surface-variant text-xs">Video on file (URL unavailable)</span>{% else %}<span class="text-on-surface-variant">No video yet</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
                 <dd>{% if q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open booking</a>{% else %}<span class="text-on-surface-variant">Not yet provided</span>{% endif %}</dd>
             </div>
         </dl>
-        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}">
+        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}" class="space-y-4">
             {% csrf_token %}
+            <div>
+                <label for="final-offer-awaiting-{{ q.pk }}" class="block text-sm font-medium text-on-surface mb-1">Confirmed buy-back (USD)</label>
+                <p class="text-xs text-on-surface-variant mb-2">Leave blank to use the offer above.</p>
+                <input id="final-offer-awaiting-{{ q.pk }}" name="final_offer" type="text" autocomplete="off" placeholder="e.g. 150 or $150" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+            </div>
             <button type="submit" class="w-full font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-opacity">
                 Approve
             </button>
@@ -178,9 +195,9 @@
 <div id="modal-{{ q.pk }}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ q.pk }}"
      class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modal-{{ q.pk }}')"></div>
-    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
         <button type="button" onclick="closeModal('modal-{{ q.pk }}')"
-                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors">
+                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20">
             <span class="material-symbols-outlined">close</span>
         </button>
         <div class="mb-5">
@@ -189,6 +206,18 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
+        {% if q.has_video and q.signed_video_url %}
+        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
+                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
+            </video>
+        </div>
+        <p class="text-xs text-on-surface-variant font-body mb-5">
+            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
+        </p>
+        {% elif q.has_video %}
+        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
+        {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
@@ -198,7 +227,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if q.has_video and q.signed_video_url %}<a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline"><span class="material-symbols-outlined text-base">play_circle</span> Watch video</a>{% elif q.has_video %}<span class="text-on-surface-variant text-xs">Video on file (URL unavailable)</span>{% else %}<span class="text-on-surface-variant">No video yet</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
@@ -220,9 +249,9 @@
 <div id="modal-{{ q.pk }}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ q.pk }}"
      class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modal-{{ q.pk }}')"></div>
-    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
         <button type="button" onclick="closeModal('modal-{{ q.pk }}')"
-                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors">
+                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20">
             <span class="material-symbols-outlined">close</span>
         </button>
         <div class="mb-5">
@@ -231,6 +260,18 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
+        {% if q.has_video and q.signed_video_url %}
+        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
+                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
+            </video>
+        </div>
+        <p class="text-xs text-on-surface-variant font-body mb-5">
+            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
+        </p>
+        {% elif q.has_video %}
+        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
+        {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
@@ -240,7 +281,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if q.has_video and q.signed_video_url %}<a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline"><span class="material-symbols-outlined text-base">play_circle</span> Watch video</a>{% elif q.has_video %}<span class="text-on-surface-variant text-xs">Video on file (URL unavailable)</span>{% else %}<span class="text-on-surface-variant">No video yet</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Booking link</dt>
@@ -262,6 +303,7 @@ function openModal(id) {
 function closeModal(id) {
     var el = document.getElementById(id);
     if (!el) return;
+    el.querySelectorAll('video').forEach(function (v) { v.pause(); });
     el.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
 }

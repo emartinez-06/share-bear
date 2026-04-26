@@ -40,6 +40,11 @@ class AIQuote(models.Model):
         help_text='Set when an admin marks the item as physically picked up.',
     )
     picked_up_at = models.DateTimeField(null=True, blank=True)
+    admin_confirmed_offer_display = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text='When set, overrides the AI-parsed offer for user-facing display (e.g. after admin review).',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -47,6 +52,8 @@ class AIQuote(models.Model):
 
     @property
     def offer_display(self) -> str:
+        if (self.admin_confirmed_offer_display or '').strip():
+            return self.admin_confirmed_offer_display.strip()
         return format_share_bear_offer_display(self.quote_text)
 
     def __str__(self):

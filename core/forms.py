@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 from django.conf import settings
 
@@ -102,6 +104,46 @@ class QuoteVideoForm(forms.Form):
         ):
             raise forms.ValidationError('Please upload a video (MP4, WebM, or MOV).')
         return f
+
+
+def normalize_confirmed_buyback_offer(value: str) -> str | None:
+    """
+    Parse optional staff-entered buy-back amount. Returns None to keep the AI offer.
+    Raises ValidationError for invalid input.
+    """
+    s = (value or '').strip()
+    if not s:
+        return None
+    clean = s.replace(',', '').lstrip('$').strip()
+    if not clean:
+        return None
+    try:
+        d = Decimal(clean)
+    except InvalidOperation as e:
+        raise forms.ValidationError('Enter a valid amount (e.g. 150 or $150.00).') from e
+    if d < 0 or d > Decimal('999999.99'):
+        raise forms.ValidationError('Amount out of range.')
+    q = d.quantize(Decimal('0.01'))
+    if q == q.to_integral_value():
+        return f'${int(q):,}'
+    return f'${q:,.2f}'
+
+
+class AdminAcceptQuoteForm(forms.Form):
+    final_offer = forms.CharField(
+        required=False,
+        label='',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'field-input',
+                'placeholder': 'e.g. 150 (leave blank for AI offer)',
+                'autocomplete': 'off',
+            },
+        ),
+    )
+
+    def clean_final_offer(self):
+        return normalize_confirmed_buyback_offer(self.cleaned_data.get('final_offer', ''))
 
 
 class BookingLinkForm(forms.Form):

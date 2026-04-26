@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import AIQuoteForm, BookingLinkForm, QuoteVideoForm
+from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, QuoteVideoForm
 from .gemini_quote import build_quote_prompt, format_share_bear_offer_display, get_quote_from_gemini
 from .models import AIQuote
 from .supabase_storage import create_signed_video_url, is_storage_configured, upload_quote_video
-from .video_utils import file_extension_for_upload
+from .video_utils import file_extension_for_upload, video_mime_type_from_path
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +62,10 @@ def admin_quotes_view(request):
     )
     for q in quotes:
         q.signed_video_url = None
+        q.video_mime = 'video/mp4'
         if q.has_video and q.video_path:
             q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
+            q.video_mime = video_mime_type_from_path(q.video_path)
     return render(
         request,
         'admin_quotes.html',
@@ -91,9 +93,21 @@ def admin_accept_quote_view(request, quote_id: int):
     if quote.quote_accepted_by_admin:
         messages.info(request, 'This offer was already accepted.')
         return redirect('admin_quotes')
+
+    form = AdminAcceptQuoteForm(request.POST)
+    if not form.is_valid():
+        e = list(form.errors.values())[0][0] if form.errors else 'Invalid input.'
+        messages.error(request, e)
+        return redirect('admin_quotes')
+
+    final = form.cleaned_data['final_offer']
     quote.quote_accepted_by_admin = True
     quote.quote_reviewed_at = timezone.now()
-    quote.save(update_fields=['quote_accepted_by_admin', 'quote_reviewed_at'])
+    update_fields = ['quote_accepted_by_admin', 'quote_reviewed_at']
+    if final:
+        quote.admin_confirmed_offer_display = final
+        update_fields.append('admin_confirmed_offer_display')
+    quote.save(update_fields=update_fields)
     messages.success(
         request,
         f'You accepted the buy-back offer for @{quote.user.username} — {quote.item_name}.',
@@ -264,8 +278,10 @@ def admin_kanban_view(request):
     awaiting, approved, picked_up_list = [], [], []
     for q in all_quotes:
         q.signed_video_url = None
+        q.video_mime = 'video/mp4'
         if q.has_video and q.video_path:
             q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
+            q.video_mime = video_mime_type_from_path(q.video_path)
         if q.picked_up:
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
