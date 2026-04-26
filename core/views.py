@@ -23,6 +23,31 @@ DEV_MOCK_QUOTE_ITEM_NAME = 'Sample item (dev preview)'
 DEV_MOCK_OFFER_DISPLAY = '$127'
 
 
+def build_approval_mailto_url(quote_obj: AIQuote) -> str | None:
+    recipient = (quote_obj.user.email or '').strip()
+    if not recipient:
+        return None
+
+    subject = f'Your SHARE Bear item has been approved: {quote_obj.item_name}'
+    body_lines = [
+        f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
+        '',
+        'Your item has been approved!',
+        'Please fill out the booking link found under your account profile to schedule a pickup date convenient for you.',
+        '',
+        f'Final approved price: {quote_obj.offer_display}',
+        f'Item: {quote_obj.item_name}',
+        f'Item description: {quote_obj.description}',
+        '',
+        'If anything seems out of the ordinary or you have any concerns, please reply directly to this email so we can help.',
+        '',
+        'Best,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
 def home_view(request):
     return render(
         request,
@@ -277,6 +302,7 @@ def admin_kanban_view(request):
     all_quotes = list(AIQuote.objects.select_related('user').order_by('-created_at'))
     awaiting, approved, picked_up_list = [], [], []
     for q in all_quotes:
+        q.approval_mailto_url = None
         q.signed_video_url = None
         q.video_mime = 'video/mp4'
         if q.has_video and q.video_path:
@@ -285,6 +311,7 @@ def admin_kanban_view(request):
         if q.picked_up:
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
+            q.approval_mailto_url = build_approval_mailto_url(q)
             approved.append(q)
         else:
             awaiting.append(q)

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_http_methods
 
 from core.models import AIQuote
 
@@ -44,6 +45,7 @@ def login_view(request):
     return render(request, 'users/login.html', {'form': form})
 
 
+@require_http_methods(['POST'])
 def logout_view(request):
     logout(request)
     return redirect('home')

@@ -1,10 +1,14 @@
+from urllib.parse import unquote
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from core.gemini_quote import extract_share_bear_offer_amount, format_share_bear_offer_display
 from core.forms import AdminAcceptQuoteForm, normalize_confirmed_buyback_offer
 from core.models import AIQuote
+from core.views import build_approval_mailto_url
 
 
 class ExtractOfferTests(TestCase):
@@ -69,6 +73,42 @@ class AIQuoteOfferDisplayTests(TestCase):
         self.assertEqual(q.offer_display, '$200')
 
 
+class BuildApprovalMailtoUrlTests(TestCase):
+    def test_mailto_contains_required_template_content(self):
+        user = get_user_model().objects.create_user(
+            'mailuser', 'mailuser@test.example', 'testpass123', first_name='Mia'
+        )
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='iPad Pro',
+            description='11-inch model in good condition',
+            quote_text='- SHARE Bear offer (USD): $100\n',
+            admin_confirmed_offer_display='$125',
+            quote_accepted_by_admin=True,
+        )
+
+        url = build_approval_mailto_url(quote)
+        self.assertIsNotNone(url)
+        decoded = unquote(url or '')
+        self.assertIn('mailto:mailuser@test.example?subject=', decoded)
+        self.assertIn('Your item has been approved!', decoded)
+        self.assertIn('Final approved price: $125', decoded)
+        self.assertIn('Item: iPad Pro', decoded)
+        self.assertIn('Item description: 11-inch model in good condition', decoded)
+        self.assertIn('reply directly to this email', decoded)
+
+    def test_mailto_returns_none_without_recipient_email(self):
+        user = get_user_model().objects.create_user('noemail', '', 'testpass123')
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='Desk lamp',
+            description='White desk lamp',
+            quote_text='- SHARE Bear offer (USD): $20\n',
+            quote_accepted_by_admin=True,
+        )
+        self.assertIsNone(build_approval_mailto_url(quote))
+
+
 class AdminKanbanApproveViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -125,6 +165,36 @@ class AdminKanbanApproveViewTests(TestCase):
         self.quote.refresh_from_db()
         self.assertTrue(self.quote.quote_accepted_by_admin)
         self.assertEqual(self.quote.admin_confirmed_offer_display, '')
+
+    def test_approved_modal_renders_mailto_link(self):
+        self.client.login(username='admstaff', password='testpass123')
+        self.client.post(
+            f'/admin-dashboard/approve/{self.quote.pk}/',
+            {'final_offer': '125.50'},
+        )
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'mailto:sel%40test.example?subject=')
+        self.assertContains(r, 'Email user')
+
+    def test_approved_modal_shows_email_missing_fallback(self):
+        seller_no_email = get_user_model().objects.create_user(
+            'sellernoemail', '', 'testpass123'
+        )
+        AIQuote.objects.create(
+            user=seller_no_email,
+            item_name='Chair',
+            description='Wood chair',
+            quote_text='- SHARE Bear offer (USD): $25\n',
+            has_video=True,
+            video_path='2/quote_22/x.mp4',
+            quote_accepted_by_admin=True,
+            quote_reviewed_at=timezone.now(),
+        )
+        self.client.login(username='admstaff', password='testpass123')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'No account email on file for this user.')
 
 
 class AdminAcceptQuoteFormTests(TestCase):
