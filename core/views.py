@@ -308,14 +308,27 @@ def admin_kanban_approve_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if not q.has_video:
-        messages.error(request, f'Cannot approve "{q.item_name}" — the user has not uploaded a video yet.')
+        messages.error(
+            request,
+            f'Cannot approve "{q.item_name}" — the user has not uploaded a video yet.',
+        )
         return redirect('admin_kanban')
     if q.quote_accepted_by_admin:
         messages.info(request, f'"{q.item_name}" is already approved.')
         return redirect('admin_kanban')
+    form = AdminAcceptQuoteForm(request.POST)
+    if not form.is_valid():
+        e = list(form.errors.values())[0][0] if form.errors else 'Invalid input.'
+        messages.error(request, e)
+        return redirect('admin_kanban')
+    final = form.cleaned_data['final_offer']
     q.quote_accepted_by_admin = True
     q.quote_reviewed_at = timezone.now()
-    q.save(update_fields=['quote_accepted_by_admin', 'quote_reviewed_at'])
+    update_fields = ['quote_accepted_by_admin', 'quote_reviewed_at']
+    if final:
+        q.admin_confirmed_offer_display = final
+        update_fields.append('admin_confirmed_offer_display')
+    q.save(update_fields=update_fields)
     messages.success(request, f'Approved "{q.item_name}" for @{q.user.username}.')
     return redirect('admin_kanban')
 

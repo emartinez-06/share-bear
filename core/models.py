@@ -33,7 +33,31 @@ class AIQuote(models.Model):
     booking_link = models.URLField(
         max_length=1024,
         blank=True,
-        help_text='Microsoft Booking link submitted by the user.',
+        help_text='Optional manual link (legacy) if Calendar pickup is not used.',
+    )
+    google_calendar_id = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text='Google Calendar id for the pickup event (e.g. email@example.com).',
+    )
+    google_event_id = models.TextField(
+        blank=True,
+        help_text='Google Calendar event id for the chosen pickup slot.',
+    )
+    pickup_event_html_link = models.URLField(
+        max_length=2000,
+        blank=True,
+        help_text='Link to open the pickup event in Google Calendar.',
+    )
+    pickup_starts_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Start of the pickup event (from Google).',
+    )
+    pickup_ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='End of the pickup event (from Google).',
     )
     picked_up = models.BooleanField(
         default=False,

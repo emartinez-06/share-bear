@@ -2,6 +2,7 @@
 {% block title %}My Account — SHARE Bear{% endblock %}
 
 {% block body %}
+{% load tz %}
 <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
     <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
         <div class="flex items-center gap-8">
@@ -37,9 +38,9 @@
 <main class="pt-28 pb-20 px-6 max-w-5xl mx-auto">
 
     {% for msg in messages %}
-    <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center gap-3 fade-up">
-        <span class="material-symbols-outlined text-emerald-600">check_circle</span>
-        <p class="text-emerald-800 text-sm font-body font-medium">{{ msg }}</p>
+    <div class="mb-6 rounded-lg px-4 py-3 flex items-center gap-3 fade-up border {% if 'error' in msg.tags %}bg-red-50 border-red-200{% else %}bg-emerald-50 border-emerald-200{% endif %}">
+        <span class="material-symbols-outlined {% if 'error' in msg.tags %}text-red-600{% else %}text-emerald-600{% endif %}">{% if 'error' in msg.tags %}error{% else %}check_circle{% endif %}</span>
+        <p class="text-sm font-body font-medium {% if 'error' in msg.tags %}text-red-900{% else %}text-emerald-800{% endif %}">{{ msg }}</p>
     </div>
     {% endfor %}
 
@@ -66,6 +67,53 @@
             </div>
         </div>
     </section>
+
+    {% if pickup_calendar_configured and pickup_slots and pickup_eligible_quotes %}
+    <section class="fade-up max-w-3xl mx-auto mt-10">
+        <div class="bg-surface-container-lowest rounded-xl ambient-shadow border border-outline-variant/20 p-6 sm:p-8">
+            <h2 class="font-display font-bold text-xl text-primary tracking-tightest mb-2">Schedule pickup</h2>
+            <p class="text-sm text-on-surface-variant font-body mb-6">Choose an available pickup time and which items this visit is for. One slot can cover multiple items.</p>
+            <form method="post" action="{% url 'profile_attach_pickup' %}" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label for="slot_key" class="block text-sm font-semibold text-on-surface mb-2">Available times</label>
+                    <select name="slot_key" id="slot_key" required class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body">
+                        <option value="">Select a time slot…</option>
+                        {% for s in pickup_slots %}
+                        <option value="{{ s.postKey }}">{% if s.start %}{% timezone pickup_display_timezone %}{{ s.summary }} — {{ s.start|date:"D M j, Y" }}, {{ s.start|date:"g:i A" }}{% if s.end %} – {{ s.end|date:"g:i A" }}{% endif %}{% endtimezone %}{% else %}{{ s.summary }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <p class="block text-sm font-semibold text-on-surface mb-2">Items for this pickup</p>
+                    <ul class="space-y-2 max-h-48 overflow-y-auto rounded-lg border border-outline-variant/30 p-3">
+                        {% for q in pickup_eligible_quotes %}
+                        <li class="flex items-center gap-3 text-sm font-body">
+                            <input type="checkbox" name="quote_ids" value="{{ q.pk }}" id="pq-{{ q.pk }}" class="rounded border-outline-variant text-primary focus:ring-primary/30" />
+                            <label for="pq-{{ q.pk }}" class="text-on-surface cursor-pointer">{{ q.item_name }} <span class="text-on-surface-variant">({{ q.offer_display }})</span></label>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button type="submit" class="w-full sm:w-auto font-display font-bold text-on-primary bg-primary px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">
+                    Book selected items
+                </button>
+            </form>
+        </div>
+    </section>
+    {% elif pickup_calendar_configured and pickup_slots and not pickup_eligible_quotes %}
+    <section class="fade-up max-w-3xl mx-auto mt-10">
+        <p class="text-sm text-on-surface-variant font-body bg-surface-container-lowest rounded-xl border border-outline-variant/20 px-5 py-4">You have no confirmed buy-backs waiting for a pickup (or they are already scheduled). Items must be confirmed by SHARE Bear before you can pick a time.</p>
+    </section>
+    {% elif pickup_calendar_configured and not pickup_slots %}
+    <section class="fade-up max-w-3xl mx-auto mt-10">
+        <p class="text-sm text-on-surface-variant font-body bg-surface-container-lowest rounded-xl border border-outline-variant/20 px-5 py-4">No open pickup times are available in the listing window. Check back later or contact SHARE Bear.</p>
+    </section>
+    {% elif not pickup_calendar_configured %}
+    <section class="fade-up max-w-3xl mx-auto mt-10">
+        <p class="text-sm text-on-surface-variant font-body bg-amber-50/80 rounded-xl border border-amber-200/60 px-5 py-4">Calendar pickup is not configured for this site yet.</p>
+    </section>
+    {% endif %}
 
     <section class="fade-up max-w-3xl mx-auto mt-12">
         <div class="flex items-center justify-between mb-6">
@@ -106,6 +154,26 @@
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-amber-50 text-amber-900 px-2 py-0.5 font-medium">Under review</span>
                         {% endif %}
                     </div>
+                    {% if quote.google_event_id %}
+                    <div class="mt-4 pt-4 border-t border-outline-variant/20 text-xs font-body text-on-surface-variant">
+                        <p class="font-semibold text-on-surface mb-1">Scheduled pickup</p>
+                        {% if quote.pickup_starts_at %}
+                        <p class="text-on-surface mb-1">{% timezone pickup_display_timezone %}{{ quote.pickup_starts_at|date:"D M j, Y g:i A" }}{% if quote.pickup_ends_at %} – {{ quote.pickup_ends_at|date:"g:i A" }}{% endif %}{% endtimezone %}</p>
+                        {% endif %}
+                        {% if quote.pickup_event_html_link %}
+                        <a href="{{ quote.pickup_event_html_link }}" target="_blank" rel="noopener noreferrer" class="text-primary font-medium hover:underline inline-flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span> Open in Google Calendar
+                        </a>
+                        {% endif %}
+                        {% if quote.google_calendar_id or quote.google_event_id %}
+                        <p class="mt-2 font-mono text-[10px] break-all opacity-80">Cal: {{ quote.google_calendar_id|default:"—" }} · Event: {{ quote.google_event_id|truncatechars:48 }}</p>
+                        {% endif %}
+                    </div>
+                    {% elif quote.booking_link %}
+                    <div class="mt-4 pt-4 border-t border-outline-variant/20 text-xs">
+                        <a href="{{ quote.booking_link }}" class="text-primary font-medium hover:underline break-all" target="_blank" rel="noopener noreferrer">Booking link (legacy)</a>
+                    </div>
+                    {% endif %}
                 </div>
             </article>
             {% empty %}

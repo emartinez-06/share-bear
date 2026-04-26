@@ -1,4 +1,6 @@
 asgiref==3.11.1
 Django==6.0.3
+google-api-python-client==2.186.0
+google-auth==2.41.0
 psycopg[binary]==3.2.12
 sqlparse==0.5.5

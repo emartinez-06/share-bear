@@ -10,6 +10,7 @@ class AIQuoteAdmin(admin.ModelAdmin):
         'offer',
         'has_video',
         'quote_accepted_by_admin',
+        'google_event_short',
         'user',
         'created_at',
     )
@@ -22,8 +23,20 @@ class AIQuoteAdmin(admin.ModelAdmin):
         'video_path',
         'quote_reviewed_at',
         'admin_confirmed_offer_display',
+        'google_calendar_id',
+        'google_event_id',
+        'pickup_event_html_link',
+        'pickup_starts_at',
+        'pickup_ends_at',
     )
 
     @admin.display(description='Buy-back offer')
     def offer(self, obj):
         return obj.offer_display
+
+    @admin.display(description='GCal event', ordering='google_event_id')
+    def google_event_short(self, obj):
+        if not (obj.google_event_id or '').strip():
+            return '—'
+        s = (obj.google_event_id or '')[:20]
+        return f'{s}…' if len(obj.google_event_id) > 20 else s
