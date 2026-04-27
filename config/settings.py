@@ -42,7 +42,12 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 VERCEL_ANALYTICS_ENABLED = os.environ.get('VERCEL_ANALYTICS_ENABLED', 'False') == 'True'
 
-default_allowed_hosts = ['baylorshare.com', 'www.baylorshare.com']
+default_allowed_hosts = [
+    'sharebear.app',
+    'www.sharebear.app',
+    'baylorshare.com',
+    'www.baylorshare.com',
+]
 if DEBUG:
     default_allowed_hosts.extend(['localhost', '127.0.0.1'])
 
