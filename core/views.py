@@ -48,6 +48,44 @@ def build_approval_mailto_url(quote_obj: AIQuote) -> str | None:
     return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
 
 
+def build_pickup_location_mailto_url(quote_obj: AIQuote) -> str | None:
+    recipient = (quote_obj.user.email or '').strip()
+    if not recipient:
+        return None
+    if not ((quote_obj.google_event_id or '').strip() or quote_obj.booking_initiated):
+        return None
+
+    pickup_time = 'your scheduled pickup slot'
+    if quote_obj.pickup_starts_at:
+        start_local = timezone.localtime(quote_obj.pickup_starts_at)
+        if quote_obj.pickup_ends_at:
+            end_local = timezone.localtime(quote_obj.pickup_ends_at)
+            pickup_time = f'{start_local:%A, %b %-d at %-I:%M %p} to {end_local:%-I:%M %p}'
+        else:
+            pickup_time = f'{start_local:%A, %b %-d at %-I:%M %p}'
+
+    subject = f'Pickup location confirmation needed: {quote_obj.item_name}'
+    body_lines = [
+        f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
+        '',
+        'Confirmed! You booked a pickup slot for these item(s):',
+        f'- {quote_obj.item_name}',
+        '',
+        f'Time: {pickup_time}',
+        '',
+        'Please reply to this email with where you would like to meet:',
+        '- Penland',
+        '- Martin',
+        '- Collins',
+        '- Off-campus apartment (include apartment number)',
+        '',
+        'Thanks,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
 def home_view(request):
     return render(
         request,
@@ -303,6 +341,7 @@ def admin_kanban_view(request):
     awaiting, approved, picked_up_list = [], [], []
     for q in all_quotes:
         q.approval_mailto_url = None
+        q.pickup_location_mailto_url = None
         q.signed_video_url = None
         q.video_mime = 'video/mp4'
         if q.has_video and q.video_path:
@@ -312,6 +351,7 @@ def admin_kanban_view(request):
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
             q.approval_mailto_url = build_approval_mailto_url(q)
+            q.pickup_location_mailto_url = build_pickup_location_mailto_url(q)
             approved.append(q)
         else:
             awaiting.append(q)
@@ -478,4 +518,60 @@ def admin_kanban_reset_booking_view(request, quote_id: int):
     q.booking_initiated = False
     q.save(update_fields=['booking_initiated'])
     messages.success(request, f'Booking reset for "{q.item_name}" — item is bookable again.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_assign_admin_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.quote_accepted_by_admin or q.picked_up:
+        messages.error(request, f'"{q.item_name}" must be in Approved to set an assigned admin.')
+        return redirect('admin_kanban')
+    assigned = (request.POST.get('assigned_admin_name') or '').strip()[:120]
+    q.assigned_admin_name = assigned
+    q.save(update_fields=['assigned_admin_name'])
+    if assigned:
+        messages.success(request, f'Assigned admin for "{q.item_name}" set to {assigned}.')
+    else:
+        messages.success(request, f'Assigned admin cleared for "{q.item_name}".')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_pickup_label_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.picked_up:
+        messages.error(request, f'"{q.item_name}" must be in Picked Up to set color/number.')
+        return redirect('admin_kanban')
+
+    allowed_colors = {'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'black', 'white'}
+    color = (request.POST.get('pickup_label_color') or '').strip().lower()
+    if color and color not in allowed_colors:
+        messages.error(request, 'Choose a valid color.')
+        return redirect('admin_kanban')
+
+    number_raw = (request.POST.get('pickup_label_number') or '').strip()
+    number: int | None = None
+    if number_raw:
+        try:
+            number = int(number_raw)
+        except ValueError:
+            messages.error(request, 'Tag number must be a whole number.')
+            return redirect('admin_kanban')
+        if number <= 0:
+            messages.error(request, 'Tag number must be greater than 0.')
+            return redirect('admin_kanban')
+
+    q.pickup_label_color = color
+    q.pickup_label_number = number
+    q.save(update_fields=['pickup_label_color', 'pickup_label_number'])
+    messages.success(request, f'Updated pickup label for "{q.item_name}".')
     return redirect('admin_kanban')

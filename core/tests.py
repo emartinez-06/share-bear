@@ -13,7 +13,7 @@ from googleapiclient.errors import HttpError
 from core.gemini_quote import extract_share_bear_offer_amount, format_share_bear_offer_display
 from core.forms import AdminAcceptQuoteForm, normalize_confirmed_buyback_offer
 from core.models import AIQuote
-from core.views import build_approval_mailto_url
+from core.views import build_approval_mailto_url, build_pickup_location_mailto_url
 
 
 class ExtractOfferTests(TestCase):
@@ -114,6 +114,29 @@ class BuildApprovalMailtoUrlTests(TestCase):
         self.assertIsNone(build_approval_mailto_url(quote))
 
 
+class BuildPickupLocationMailtoUrlTests(TestCase):
+    def test_mailto_contains_pickup_location_prompt(self):
+        user = get_user_model().objects.create_user(
+            'pickupmail', 'pickupmail@test.example', 'testpass123', first_name='Pia'
+        )
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='Monitor',
+            description='24-inch monitor',
+            quote_text='- SHARE Bear offer (USD): $40\n',
+            quote_accepted_by_admin=True,
+            booking_initiated=True,
+            google_event_id='evt_1',
+            pickup_starts_at=timezone.now(),
+        )
+        url = build_pickup_location_mailto_url(quote)
+        self.assertIsNotNone(url)
+        decoded = unquote(url or '')
+        self.assertIn('Pickup location confirmation needed', decoded)
+        self.assertIn('Confirmed! You booked a pickup slot', decoded)
+        self.assertIn('Off-campus apartment (include apartment number)', decoded)
+
+
 class AdminKanbanApproveViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -209,6 +232,47 @@ class AdminAcceptQuoteFormTests(TestCase):
         f2 = AdminAcceptQuoteForm({'final_offer': '50'})
         self.assertTrue(f2.is_valid())
         self.assertEqual(f2.cleaned_data['final_offer'], '$50')
+
+
+class AdminKanbanMetadataTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('kanbanstaff', 'ks@test.example', 'pw', is_staff=True)
+        cls.seller = User.objects.create_user('kquote', 'kq@test.example', 'pw2')
+        cls.quote = AIQuote.objects.create(
+            user=cls.seller,
+            item_name='Lamp',
+            description='desk lamp',
+            quote_text='- SHARE Bear offer (USD): $15\n',
+            has_video=True,
+            video_path='1/q/x.mp4',
+            quote_accepted_by_admin=True,
+        )
+
+    def test_assign_admin_updates_quote(self):
+        self.client.login(username='kanbanstaff', password='pw')
+        r = self.client.post(
+            f'/admin-dashboard/assign-admin/{self.quote.pk}/',
+            {'assigned_admin_name': 'Emma'},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.quote.refresh_from_db()
+        self.assertEqual(self.quote.assigned_admin_name, 'Emma')
+
+    def test_pickup_label_updates_when_picked_up(self):
+        self.quote.picked_up = True
+        self.quote.picked_up_at = timezone.now()
+        self.quote.save(update_fields=['picked_up', 'picked_up_at'])
+        self.client.login(username='kanbanstaff', password='pw')
+        r = self.client.post(
+            f'/admin-dashboard/pickup-label/{self.quote.pk}/',
+            {'pickup_label_color': 'blue', 'pickup_label_number': '7'},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.quote.refresh_from_db()
+        self.assertEqual(self.quote.pickup_label_color, 'blue')
+        self.assertEqual(self.quote.pickup_label_number, 7)
 
 
 class ProfileAttachPickupViewTests(TestCase):

@@ -68,6 +68,21 @@ class AIQuote(models.Model):
         help_text='Set when an admin marks the item as physically picked up.',
     )
     picked_up_at = models.DateTimeField(null=True, blank=True)
+    assigned_admin_name = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='Admin team member currently handling this item.',
+    )
+    pickup_label_color = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text='Physical tag color used after pickup (org inventory convention).',
+    )
+    pickup_label_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Physical tag number used after pickup (org inventory convention).',
+    )
     admin_confirmed_offer_display = models.CharField(
         max_length=32,
         blank=True,

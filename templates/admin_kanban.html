@@ -97,9 +97,12 @@
                             </span>
                         </div>
                         <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
+                        {% if q.assigned_admin_name %}
+                        <p class="text-xs text-on-surface-variant font-body">Admin: {{ q.assigned_admin_name }}</p>
+                        {% endif %}
                         <p class="text-xs text-on-surface-variant font-body">Approved {{ q.quote_reviewed_at|date:"M j, Y" }}</p>
                         <div class="mt-2 flex flex-wrap gap-1.5">
-                            {% if q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5">Booked</span>{% endif %}
+                            {% if q.google_event_id or q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5">Booked</span>{% endif %}
                             {% if q.booking_link %}<span class="text-[10px] font-medium rounded-full bg-secondary-container/40 text-on-secondary-container px-2 py-0.5">Booking link</span>{% endif %}
                         </div>
                     </button>
@@ -127,6 +130,9 @@
                             </span>
                         </div>
                         <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
+                        {% if q.pickup_label_color or q.pickup_label_number %}
+                        <p class="text-xs text-on-surface-variant font-body">Tag: {{ q.pickup_label_color|default:"—"|title }} {% if q.pickup_label_number %}#{{ q.pickup_label_number }}{% endif %}</p>
+                        {% endif %}
                         <p class="text-xs text-on-surface-variant font-body">{{ q.picked_up_at|date:"M j, Y" }}</p>
                     </button>
                     {% empty %}
@@ -219,7 +225,7 @@
                 <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2 py-0.5">
                     <span class="material-symbols-outlined text-xs">check_circle</span> Approved
                 </span>
-                {% if q.booking_initiated %}
+                {% if q.google_event_id or q.booking_initiated %}
                 <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200 rounded-full px-2 py-0.5">Booked</span>
                 {% endif %}
             </div>
@@ -241,6 +247,7 @@
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Approved</dt><dd class="text-on-surface">{{ q.quote_reviewed_at|date:"M j, Y g:i A" }}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Assigned</dt><dd class="text-on-surface">{{ q.assigned_admin_name|default:"—" }}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Make / Model</dt><dd class="text-on-surface">{% if q.unknown_make_model %}Unknown{% else %}{{ q.make|default:"—" }} / {{ q.model|default:"—" }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Description</dt><dd class="text-on-surface leading-relaxed">{{ q.description }}</dd></div>
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
@@ -265,6 +272,21 @@
             No account email on file for this user.
         </div>
         {% endif %}
+        {% if q.pickup_location_mailto_url %}
+        <a href="{{ q.pickup_location_mailto_url }}"
+           class="mb-2 w-full inline-flex items-center justify-center gap-2 font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-all">
+            <span class="material-symbols-outlined text-base">mark_email_read</span>
+            Email for location
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'admin_kanban_assign_admin' quote_id=q.pk %}" class="mb-2 rounded-xl border border-outline-variant/40 bg-surface-container p-3">
+            {% csrf_token %}
+            <label for="assigned-admin-{{ q.pk }}" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Assigned admin</label>
+            <div class="flex gap-2">
+                <input id="assigned-admin-{{ q.pk }}" name="assigned_admin_name" type="text" value="{{ q.assigned_admin_name }}" placeholder="e.g. Emma" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                <button type="submit" class="text-sm font-semibold font-body text-primary border border-primary/30 px-3 py-2 rounded-lg hover:bg-primary hover:text-on-primary transition-all">Save</button>
+            </div>
+        </form>
         <form method="post" action="{% url 'admin_kanban_pickup' quote_id=q.pk %}">
             {% csrf_token %}
             <button type="submit" class="w-full font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-opacity">
@@ -321,6 +343,8 @@
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Picked Up</dt><dd class="text-on-surface">{{ q.picked_up_at|date:"M j, Y g:i A" }}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Assigned</dt><dd class="text-on-surface">{{ q.assigned_admin_name|default:"—" }}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Tag</dt><dd class="text-on-surface">{% if q.pickup_label_color or q.pickup_label_number %}{{ q.pickup_label_color|default:"—"|title }} {% if q.pickup_label_number %}#{{ q.pickup_label_number }}{% endif %}{% else %}—{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Make / Model</dt><dd class="text-on-surface">{% if q.unknown_make_model %}Unknown{% else %}{{ q.make|default:"—" }} / {{ q.model|default:"—" }}{% endif %}</dd></div>
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Description</dt><dd class="text-on-surface leading-relaxed">{{ q.description }}</dd></div>
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
@@ -333,6 +357,31 @@
                 <dd class="min-w-0">{% if q.pickup_event_html_link %}<a href="{{ q.pickup_event_html_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium text-primary hover:underline break-all"><span class="material-symbols-outlined text-base">calendar_month</span> Open in Google</a><span class="block text-xs text-on-surface-variant font-mono mt-1">{% if q.google_event_id %}{{ q.google_event_id|truncatechars:64 }}{% endif %}</span>{% elif q.booking_link %}<a href="{{ q.booking_link }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline break-all">Legacy booking</a>{% else %}<span class="text-on-surface-variant">—</span>{% endif %}</dd>
             </div>
         </dl>
+        <form method="post" action="{% url 'admin_kanban_pickup_label' quote_id=q.pk %}" class="mb-2 rounded-xl border border-outline-variant/40 bg-surface-container p-3">
+            {% csrf_token %}
+            <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant mb-2">Physical label</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                    <label for="pickup-label-color-{{ q.pk }}" class="block text-xs text-on-surface-variant mb-1">Color</label>
+                    <select id="pickup-label-color-{{ q.pk }}" name="pickup_label_color" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface font-body">
+                        <option value="" {% if not q.pickup_label_color %}selected{% endif %}>None</option>
+                        <option value="red" {% if q.pickup_label_color == "red" %}selected{% endif %}>Red</option>
+                        <option value="blue" {% if q.pickup_label_color == "blue" %}selected{% endif %}>Blue</option>
+                        <option value="green" {% if q.pickup_label_color == "green" %}selected{% endif %}>Green</option>
+                        <option value="yellow" {% if q.pickup_label_color == "yellow" %}selected{% endif %}>Yellow</option>
+                        <option value="purple" {% if q.pickup_label_color == "purple" %}selected{% endif %}>Purple</option>
+                        <option value="orange" {% if q.pickup_label_color == "orange" %}selected{% endif %}>Orange</option>
+                        <option value="black" {% if q.pickup_label_color == "black" %}selected{% endif %}>Black</option>
+                        <option value="white" {% if q.pickup_label_color == "white" %}selected{% endif %}>White</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="pickup-label-number-{{ q.pk }}" class="block text-xs text-on-surface-variant mb-1">Number</label>
+                    <input id="pickup-label-number-{{ q.pk }}" name="pickup_label_number" type="number" min="1" step="1" value="{{ q.pickup_label_number|default:'' }}" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                </div>
+            </div>
+            <button type="submit" class="mt-2 w-full text-sm font-semibold font-body text-primary border border-primary/30 px-3 py-2 rounded-lg hover:bg-primary hover:text-on-primary transition-all">Save label</button>
+        </form>
         <form method="post" action="{% url 'admin_kanban_unpickup' quote_id=q.pk %}">
             {% csrf_token %}
             <button type="submit" class="w-full text-sm font-semibold font-body text-on-surface-variant border border-outline-variant/50 px-5 py-2.5 rounded-xl hover:bg-surface-container transition-colors">
