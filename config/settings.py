@@ -176,13 +176,21 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+WHITENOISE_USE_FINDERS = os.environ.get('VERCEL', '') == '1'
+
+use_manifest_static_storage = os.environ.get('USE_MANIFEST_STATIC_STORAGE', 'False') == 'True'
+staticfiles_storage_backend = (
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    if use_manifest_static_storage
+    else 'whitenoise.storage.CompressedStaticFilesStorage'
+)
 
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': staticfiles_storage_backend,
     },
 }
 
