@@ -62,7 +62,7 @@ The project uses a dedicated `users` app with `users.User` inheriting Django `Ab
    ```env
    DEBUG=True
    SECRET_KEY=your-development-secret-key
-   ALLOWED_HOSTS=baylorshare.com,www.baylorshare.com,localhost,127.0.0.1
+   ALLOWED_HOSTS=sharebear.app,www.sharebear.app,localhost,127.0.0.1
    # Optional: Supabase/Postgres connection string (when set, overrides SQLite)
    DATABASE_URL=postgresql://postgres.iaehsjgixiomahxscdbj:[YOUR-PASSWORD]@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require
    ```
@@ -142,8 +142,8 @@ When `DATABASE_URL` is not set, Django falls back to local SQLite.
 
 - Keep `ALLOWED_HOSTS` set to include your Vercel domain(s).
 - Production host defaults in settings include:
-  - `baylorshare.com`
-  - `www.baylorshare.com`
+  - `sharebear.app`
+  - `www.sharebear.app`
 - By default, tests use in-memory SQLite even when `DATABASE_URL` points to Supabase (avoids pooled Postgres test DB teardown errors). To force Postgres tests, set:
 
   ```env
