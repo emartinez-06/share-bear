@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -414,4 +414,68 @@ def admin_kanban_unpickup_view(request, quote_id: int):
     q.picked_up_at = None
     q.save(update_fields=['picked_up', 'picked_up_at'])
     messages.success(request, f'Reverted "{q.item_name}" back to Approved.')
+    return redirect('admin_kanban')
+
+
+@login_required
+@require_http_methods(['POST'])
+def booking_initiate_view(request):
+    raw_ids = request.POST.getlist('quote_ids')
+    quote_ids: list[int] = []
+    for x in raw_ids:
+        try:
+            quote_ids.append(int(x))
+        except (TypeError, ValueError):
+            continue
+    quote_ids = sorted(set(quote_ids))
+
+    if not quote_ids:
+        messages.error(request, 'Select at least one item before opening Google Booking.')
+        return redirect('user_items')
+
+    qs = list(AIQuote.objects.filter(pk__in=quote_ids, user=request.user))
+    if len(qs) != len(quote_ids):
+        messages.error(request, 'One or more selected items could not be found.')
+        return redirect('user_items')
+
+    for q in qs:
+        if not (q.quote_accepted_by_admin and not q.picked_up):
+            messages.error(request, f'"{q.item_name}" is not eligible for booking.')
+            return redirect('user_items')
+        if q.booking_initiated or (q.google_event_id or '').strip():
+            messages.error(request, f'"{q.item_name}" already has a booking in progress.')
+            return redirect('user_items')
+
+    AIQuote.objects.filter(pk__in=quote_ids, user=request.user).update(booking_initiated=True)
+
+    u = request.user
+    name = (u.get_full_name() or u.username).strip()
+    email = (u.email or '').strip()
+    item_summary = '; '.join(f'#{q.pk} {q.item_name}' for q in qs)
+
+    base_url = (getattr(settings, 'GOOGLE_BOOKING_URL', '') or '').strip()
+    if base_url:
+        separator = '&' if '?' in base_url else '?'
+        params = urlencode({'name': name, 'email': email, 'details': item_summary})
+        booking_url = f'{base_url}{separator}{params}'
+    else:
+        messages.error(request, 'Booking URL is not configured. Contact SHARE Bear.')
+        return redirect('user_items')
+
+    return HttpResponseRedirect(booking_url)
+
+
+@require_http_methods(['POST'])
+def admin_kanban_reset_booking_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.booking_initiated:
+        messages.info(request, f'"{q.item_name}" does not have a pending booking to reset.')
+        return redirect('admin_kanban')
+    q.booking_initiated = False
+    q.save(update_fields=['booking_initiated'])
+    messages.success(request, f'Booking reset for "{q.item_name}" — item is bookable again.')
     return redirect('admin_kanban')

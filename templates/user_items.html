@@ -109,6 +109,8 @@
                         {% endif %}
                         {% if quote.picked_up %}
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-slate-100 text-slate-900 px-2 py-0.5 font-medium">Picked up</span>
+                        {% elif quote.booking_initiated and not quote.picked_up %}
+                        <span class="inline-flex items-center gap-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 font-medium">Booked</span>
                         {% elif quote.quote_accepted_by_admin %}
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 font-medium">Offer confirmed</span>
                         {% elif quote.has_video %}
@@ -148,6 +150,7 @@
                             type="checkbox"
                             class="pickup-item-checkbox rounded border-outline-variant text-primary focus:ring-primary mt-1"
                             value="{{ quote.item_name|escape }}"
+                            data-pk="{{ quote.pk }}"
                             data-offer="{{ quote.offer_display|escape }}"
                         >
                         <span class="flex-1">
@@ -175,16 +178,18 @@
                     <button id="cancel-pickup-modal" type="button" class="text-sm font-semibold font-body text-on-surface-variant px-4 py-2 rounded-full border border-outline-variant hover:bg-surface-container transition-colors">
                         Cancel
                     </button>
-                    <a
-                        id="open-google-booking"
-                        href="{{ google_booking_url }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-sm font-semibold font-body px-4 py-2 rounded-full bg-primary text-on-primary opacity-50 pointer-events-none"
-                        aria-disabled="true"
-                    >
-                        Open Google Booking
-                    </a>
+                    <form id="booking-initiate-form" method="post" action="{% url 'booking_initiate' %}">
+                        {% csrf_token %}
+                        <div id="booking-quote-inputs"></div>
+                        <button
+                            type="submit"
+                            id="open-google-booking"
+                            disabled
+                            class="text-sm font-semibold font-body px-4 py-2 rounded-full bg-primary text-on-primary opacity-50 cursor-not-allowed"
+                        >
+                            Open Google Booking
+                        </button>
+                    </form>
                 </div>
             </div>
         </section>
@@ -199,6 +204,7 @@
         const closeBtn = document.getElementById('close-pickup-modal');
         const cancelBtn = document.getElementById('cancel-pickup-modal');
         const bookingBtn = document.getElementById('open-google-booking');
+        const bookingInputsContainer = document.getElementById('booking-quote-inputs');
         const checkboxes = Array.from(document.querySelectorAll('.pickup-item-checkbox'));
         const summaryField = document.getElementById('pickup-selected-summary');
         const copyBtn = document.getElementById('copy-selected-items');
@@ -230,12 +236,23 @@
 
             summaryField.value = selected.length ? selected.join('\n') : '';
 
+            if (bookingInputsContainer) {
+                bookingInputsContainer.innerHTML = '';
+                selected.forEach(function(cb) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'quote_ids';
+                    input.value = cb.getAttribute('data-pk');
+                    bookingInputsContainer.appendChild(input);
+                });
+            }
+
             if (selected.length > 0) {
-                bookingBtn.classList.remove('opacity-50', 'pointer-events-none');
-                bookingBtn.removeAttribute('aria-disabled');
+                bookingBtn.disabled = false;
+                bookingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
-                bookingBtn.classList.add('opacity-50', 'pointer-events-none');
-                bookingBtn.setAttribute('aria-disabled', 'true');
+                bookingBtn.disabled = true;
+                bookingBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
         };
 

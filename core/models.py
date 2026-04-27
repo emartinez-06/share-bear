@@ -35,6 +35,10 @@ class AIQuote(models.Model):
         blank=True,
         help_text='Optional manual link (legacy) if Calendar pickup is not used.',
     )
+    booking_initiated = models.BooleanField(
+        default=False,
+        help_text='True once the user has been redirected to Google Booking for this item.',
+    )
     google_calendar_id = models.CharField(
         max_length=256,
         blank=True,
