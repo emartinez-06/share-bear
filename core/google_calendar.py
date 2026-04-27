@@ -360,8 +360,17 @@ def create_pickup_event(
             .execute()
         )
     except HttpError as e:
-        logger.error('events.insert failed: %s', e)
-        return None
+        status = getattr(getattr(e, 'resp', None), 'status', None)
+        logger.error('events.insert failed (status=%s): %s', status, e)
+        if status == 403:
+            raise RuntimeError(
+                'Google Calendar permission denied (403). Share the calendar with the service account and grant event edit access.'
+            ) from e
+        if status == 404:
+            raise RuntimeError(
+                'Google Calendar ID not found (404). Check GOOGLE_SLOT_SOURCE_CALENDAR_IDS.'
+            ) from e
+        raise RuntimeError('Google Calendar booking failed. Please try again.') from e
 
 
 def verify_slot_still_available(calendar_id: str, start: datetime, end: datetime) -> bool:

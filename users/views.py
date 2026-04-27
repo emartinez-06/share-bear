@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -16,6 +18,8 @@ from core.google_calendar import (
 from core.models import AIQuote
 
 from .forms import LoginForm, SignupForm
+
+logger = logging.getLogger(__name__)
 
 
 def signup_view(request):
@@ -169,7 +173,14 @@ def profile_attach_pickup_view(request):
                 quote_ids=quote_ids,
                 item_names=[q.item_name for q in quotes],
             )
+        except RuntimeError as e:
+            messages.error(
+                request,
+                str(e) or 'Pickup scheduling is temporarily unavailable. Please try again shortly.',
+            )
+            return redirect('profile')
         except Exception:
+            logger.exception('Unexpected pickup booking error')
             messages.error(
                 request,
                 'Pickup scheduling is temporarily unavailable. Please try again shortly.',

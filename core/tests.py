@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone as dt_timezone
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import unquote
 from zoneinfo import ZoneInfo
@@ -7,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from googleapiclient.errors import HttpError
 
 from core.gemini_quote import extract_share_bear_offer_amount, format_share_bear_offer_display
 from core.forms import AdminAcceptQuoteForm, normalize_confirmed_buyback_offer
@@ -324,8 +326,10 @@ class ProfileAttachPickupViewTests(TestCase):
                 'slot_key': make_slot_post_key('c@x', st, en),
                 'quote_ids': [str(self.q_ok.pk)],
             },
+            follow=True,
         )
-        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'invalid google credentials')
         self.q_ok.refresh_from_db()
         self.assertEqual(self.q_ok.google_event_id, '')
 
@@ -411,3 +415,30 @@ class GoogleCalendarCredentialConfigTests(TestCase):
         creds = _get_credentials()
         self.assertIsNotNone(creds)
         m_from_info.assert_called_once()
+
+
+class GoogleCalendarBookingErrorMappingTests(TestCase):
+    @override_settings(
+        GOOGLE_SERVICE_ACCOUNT_KEY_JSON='{"type":"service_account","client_email":"svc@test.example"}',
+        GOOGLE_SLOT_SOURCE_CALENDAR_IDS=['sharebearhelp@gmail.com'],
+    )
+    @patch('core.google_calendar.get_calendar_service')
+    def test_create_pickup_event_403_raises_permission_error(self, m_service):
+        from datetime import datetime, timezone
+
+        from core.google_calendar import create_pickup_event
+
+        m_exec = m_service.return_value.events.return_value.insert.return_value.execute
+        m_exec.side_effect = HttpError(SimpleNamespace(status=403, reason='Forbidden'), b'{}')
+
+        with self.assertRaises(RuntimeError) as cm:
+            create_pickup_event(
+                'sharebearhelp@gmail.com',
+                datetime(2026, 6, 15, 15, 0, tzinfo=timezone.utc),
+                datetime(2026, 6, 15, 16, 0, tzinfo=timezone.utc),
+                user_email='u@test.example',
+                user_label='@u',
+                quote_ids=[1],
+                item_names=['Item'],
+            )
+        self.assertIn('permission denied', str(cm.exception).lower())
