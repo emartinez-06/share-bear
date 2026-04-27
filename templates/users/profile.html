@@ -201,6 +201,21 @@
             </div>
             {% endfor %}
         </div>
+        {% if quotes_page and quotes_page.paginator.num_pages > 1 %}
+        <div class="mt-6 flex items-center justify-between text-sm font-body">
+            <div class="text-on-surface-variant">
+                Page {{ quotes_page.number }} of {{ quotes_page.paginator.num_pages }}
+            </div>
+            <div class="flex items-center gap-2">
+                {% if quotes_page.has_previous %}
+                <a href="?page={{ quotes_page.previous_page_number }}" class="px-3 py-1.5 rounded-full border border-primary/30 text-primary hover:bg-primary hover:text-on-primary transition-all">Previous</a>
+                {% endif %}
+                {% if quotes_page.has_next %}
+                <a href="?page={{ quotes_page.next_page_number }}" class="px-3 py-1.5 rounded-full border border-primary/30 text-primary hover:bg-primary hover:text-on-primary transition-all">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </section>
 </main>
 {% endblock %}

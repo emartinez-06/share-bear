@@ -13,6 +13,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.core.cache import cache
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -215,6 +216,12 @@ def list_available_pickup_slots(
     if not cal_id:
         return []
 
+    use_default_window = time_min is None and time_max is None
+    if use_default_window:
+        cached = cache.get('pickup_slots_default_window_v1')
+        if cached is not None:
+            return cached
+
     if time_min is None:
         time_min = datetime.now(timezone.utc)
     if time_max is None:
@@ -228,11 +235,25 @@ def list_available_pickup_slots(
     instances = _generate_all_preset_instances(time_min=time_min, time_max=time_max)
     title = (getattr(settings, 'PICKUP_EVENT_TITLE', 'SHARE Bear — Item pickup') or 'Pickup').strip()
 
+    # Avoid one DB query per slot: load booked starts once.
+    booked_starts = set()
+    if instances:
+        from core.models import AIQuote
+
+        candidate_starts = [s for s, _ in instances]
+        booked_rows = (
+            AIQuote.objects.filter(pickup_starts_at__in=candidate_starts)
+            .exclude(google_event_id='')
+            .exclude(google_event_id__isnull=True)
+            .values_list('pickup_starts_at', flat=True)
+        )
+        booked_starts = {dt for dt in booked_rows if dt is not None}
+
     out: list[dict] = []
     for start, end in instances:
         if end <= time_min:
             continue
-        if _slot_taken_in_db(start):
+        if start in booked_starts:
             continue
         out.append(
             {
@@ -245,6 +266,8 @@ def list_available_pickup_slots(
             }
         )
     out.sort(key=lambda x: (x.get('start') or datetime.min.replace(tzinfo=timezone.utc)))
+    if use_default_window:
+        cache.set('pickup_slots_default_window_v1', out, timeout=60)
     return out
 
 
