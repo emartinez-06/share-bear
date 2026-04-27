@@ -6,8 +6,8 @@
 {% block body %}
 <div class="min-h-screen">
     <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
-        <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
-            <div class="flex items-center gap-8">
+        <div class="flex justify-between items-center w-full px-4 sm:px-6 md:px-8 py-4 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-3 sm:gap-8">
                 <a href="{% url 'home' %}" class="flex items-center gap-3">
                     <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
                     <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
@@ -16,36 +16,39 @@
                 <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
                     <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                    {% if user.is_authenticated %}
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'user_items' %}">My Items</a>
+                    {% endif %}
                     {% if user.is_staff or user.is_superuser %}
                     <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
                     {% endif %}
                 </nav>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-4">
-                    <button class="scale-95 active:opacity-80 transition-all text-primary/60">
+            <div class="flex items-center gap-3 sm:gap-6">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button class="hidden sm:block scale-95 active:opacity-80 transition-all text-primary/60">
                         <span class="material-symbols-outlined">notifications</span>
                     </button>
                     {% if user.is_authenticated %}
                     <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
                         <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
                     </a>
-                    <form method="post" action="{% url 'logout' %}" class="inline">
+                    <form method="post" action="{% url 'logout' %}" class="hidden sm:inline">
                         {% csrf_token %}
                         <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">
                             Log out
                         </button>
                     </form>
                     {% else %}
-                    <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
-                    <a href="{% url 'signup' %}" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+                    <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-3 sm:px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+                    <a href="{% url 'signup' %}" class="hidden sm:inline-flex text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
                     {% endif %}
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
+    <main class="pt-24 sm:pt-28 pb-20 px-4 sm:px-6 md:px-8 max-w-[1440px] mx-auto">
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10 fade-up">
             <div class="lg:col-span-4 bg-primary rounded-lg p-8 text-on-primary">
                 <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary-container/20 mb-5">

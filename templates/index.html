@@ -103,8 +103,8 @@
     <div>
         <!-- Top Navigation Bar -->
         <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
-            <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
-                <div class="flex items-center gap-8">
+            <div class="flex justify-between items-center w-full px-4 sm:px-6 md:px-8 py-4 max-w-[1440px] mx-auto">
+                <div class="flex items-center gap-3 sm:gap-8 min-w-0">
                     <a href="{% url 'home' %}" class="flex items-center gap-3">
                         <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
                         <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
@@ -121,125 +121,120 @@
                         {% endif %}
                     </nav>
                 </div>
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-4">
-                        <button class="scale-95 active:opacity-80 transition-all text-primary/60">
+                <div class="flex items-center gap-3 sm:gap-6">
+                    <div class="flex items-center gap-2 sm:gap-4">
+                        <button class="hidden sm:block scale-95 active:opacity-80 transition-all text-primary/60">
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
                         {% if user.is_authenticated %}
                         <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
                             <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
                         </a>
-                        <form method="post" action="{% url 'logout' %}" class="inline">
+                        <form method="post" action="{% url 'logout' %}" class="hidden sm:inline">
                             {% csrf_token %}
                             <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">
                                 Log out
                             </button>
                         </form>
                         {% else %}
-                        <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
-                        <a href="{% url 'signup' %}" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+                        <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-3 sm:px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+                        <a href="{% url 'signup' %}" class="hidden sm:inline-flex text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
                         {% endif %}
                     </div>
                 </div>
             </div>
         </header>
 
-        <main class="pt-28 pb-20 px-8 max-w-[1440px] mx-auto">
-            <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16">
-                <div class="lg:col-span-8 relative overflow-hidden rounded-lg bg-primary p-12 flex flex-col justify-end min-h-[400px]">
-                    <div class="absolute inset-0 opacity-20">
-                        <svg class="w-full h-full" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
-                            <defs>
-                                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#grid)"/>
-                            <circle cx="650" cy="80" r="180" fill="rgba(254,183,26,0.15)"/>
-                            <circle cx="100" cy="350" r="120" fill="rgba(255,255,255,0.05)"/>
-                        </svg>
+        <main class="pt-24 sm:pt-28 pb-24 md:pb-20 px-4 sm:px-6 md:px-8 max-w-[1440px] mx-auto">
+            <section class="relative pt-6 sm:pt-10 pb-14 sm:pb-20 overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-10 pointer-events-none w-3/4 max-w-3xl translate-x-12 -translate-y-1/4">
+                    <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Watermark" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="relative z-10 max-w-4xl">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-8 h-[1px] bg-outline-variant"></div>
+                        <span class="font-display text-xs font-bold tracking-[0.1em] text-on-surface-variant uppercase">Campus Marketplace</span>
                     </div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-transparent"></div>
-                    <div class="relative z-10">
-                        <h1 class="text-on-primary font-display font-bold text-5xl lg:text-6xl mb-4 leading-tight tracking-tightest">Sell to SHARE Bear.<br/>Get paid quickly.</h1>
-                        <p class="text-on-primary/75 font-body mb-8 max-w-md text-lg">We buy dorm essentials, tech, and textbooks directly so you can skip listing delays and back-and-forth haggling.</p>
-                        <a href="{% url 'ai_quote' %}" class="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-bold text-lg inline-flex items-center gap-2 hover:scale-105 transition-transform ambient-shadow-lg">
-                            Get a Quote <span class="material-symbols-outlined">request_quote</span>
+
+                    <h1 class="font-display text-4xl sm:text-6xl lg:text-[5.2rem] leading-[1.05] tracking-tightest text-primary font-bold mb-8">
+                        <span class="block">The Future of</span>
+                        <span class="block">Campus Reuse</span>
+                        <span class="block italic font-light">Is Live Now.</span>
+                    </h1>
+
+                    <p class="font-body text-lg sm:text-xl text-on-surface-variant leading-relaxed max-w-2xl mb-10">
+                        The waitlist chapter is over. SHARE Bear is now fully live for Baylor students:
+                        get AI-powered offers, upload item proof, and complete pickup with a real, working buy-back flow.
+                    </p>
+
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{% url 'ai_quote' %}" class="inline-flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-xl font-bold hover:bg-primary-container transition-colors">
+                            Start a quote <span class="material-symbols-outlined text-base">arrow_forward</span>
                         </a>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-4 flex flex-col gap-6">
-                    <div class="bg-surface-container rounded-lg p-8 flex-1">
-                        <h3 class="font-display font-bold text-xl mb-6 text-primary">Direct Buy-Back</h3>
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-primary">verified</span>
-                                <span class="text-sm font-medium text-on-surface">Simple, transparent offers</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-primary">bolt</span>
-                                <span class="text-sm font-medium text-on-surface">Fast quoting flow</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-primary">local_shipping</span>
-                                <span class="text-sm font-medium text-on-surface">Convenient handoff options</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-secondary-container rounded-lg p-8 flex flex-col justify-between">
-                        <div>
-                            <span class="bg-on-secondary-container text-secondary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Certified Program</span>
-                            <h4 class="font-display font-bold text-2xl mt-4 leading-none text-on-secondary-container">Every item goes through a quality check</h4>
-                        </div>
-                        <p class="text-on-secondary-container/70 text-sm mt-4 font-body">We inspect and prepare items before they enter the next stage in the SHARE Bear cycle.</p>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'user_items' %}" class="inline-flex items-center gap-2 border border-primary/30 text-primary px-6 py-3 rounded-xl font-semibold hover:bg-primary/5 transition-colors">
+                            View my items
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </section>
 
-            <section class="mb-16">
+            <section class="py-8 sm:py-12 bg-surface-container-low rounded-[2rem] p-6 sm:p-10 mb-16">
+                <div class="max-w-3xl mx-auto bg-surface-container-lowest rounded-[1.5rem] p-6 sm:p-10 ambient-shadow">
+                    <div class="text-center mb-8">
+                        <span class="font-display text-[0.65rem] font-bold tracking-[0.2em] text-on-surface-variant uppercase mb-4 block">Now Operating</span>
+                        <h2 class="font-display text-3xl sm:text-4xl font-bold text-primary mb-3">From Waitlist to Working Product</h2>
+                        <p class="font-body text-on-surface-variant italic">
+                            Same mission, now with full execution for Baylor buy-back.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 font-body">
+                        <div class="bg-surface-container p-4 rounded-xl">
+                            <p class="text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest mb-2">01</p>
+                            <h3 class="font-display font-bold text-primary mb-1">Instant AI Quote</h3>
+                            <p class="text-sm text-on-surface-variant">Submit item details and receive a rapid estimated offer.</p>
+                        </div>
+                        <div class="bg-surface-container p-4 rounded-xl">
+                            <p class="text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest mb-2">02</p>
+                            <h3 class="font-display font-bold text-primary mb-1">Condition Verification</h3>
+                            <p class="text-sm text-on-surface-variant">Upload a short video so the team can finalize condition and pricing.</p>
+                        </div>
+                        <div class="bg-surface-container p-4 rounded-xl">
+                            <p class="text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest mb-2">03</p>
+                            <h3 class="font-display font-bold text-primary mb-1">Approval Workflow</h3>
+                            <p class="text-sm text-on-surface-variant">Admin review confirms eligible offers for pickup scheduling.</p>
+                        </div>
+                        <div class="bg-surface-container p-4 rounded-xl">
+                            <p class="text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-widest mb-2">04</p>
+                            <h3 class="font-display font-bold text-primary mb-1">Pickup + Payout</h3>
+                            <p class="text-sm text-on-surface-variant">Complete handoff steps and track your submitted items in-app.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="pb-4 sm:pb-8">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-primary rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
-                        <h3 class="font-display text-3xl font-bold text-on-primary mb-4">Trusted</h3>
-                        <p class="font-body text-on-primary/80">Built for students who want a safe, reliable way to sell and rebuy essentials.</p>
+                    <div class="bg-primary rounded-[1.5rem] p-8 sm:p-10 flex flex-col justify-end min-h-[260px]">
+                        <h3 class="font-display text-3xl font-bold text-on-primary mb-4">SHARE Bear-Only</h3>
+                        <p class="font-body text-on-primary/80">Built around trusted Baylor users and a focused student resale flow.</p>
                     </div>
-                    <div class="bg-surface-container rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
+                    <div class="bg-surface-container rounded-[1.5rem] p-8 sm:p-10 flex flex-col justify-end min-h-[260px]">
                         <h3 class="font-display text-3xl font-bold text-primary mb-4">Circular</h3>
-                        <p class="font-body text-on-surface-variant">Keep useful items in circulation and reduce waste each semester.</p>
+                        <p class="font-body text-on-surface-variant">Keep essential items circulating between semesters instead of discarded.</p>
                     </div>
-                    <div class="bg-surface-container rounded-lg p-10 flex flex-col items-center justify-center text-center min-h-[280px]">
-                        <h3 class="font-display text-3xl font-bold text-primary mb-4">Efficient</h3>
-                        <p class="font-body text-on-surface-variant">From quote to handoff, the flow is designed to be quick and low-friction.</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="bg-surface-container-low rounded-lg p-10 mb-16">
-                <h2 class="text-4xl font-display font-bold mb-6 text-primary tracking-tightest">How it works</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <h4 class="font-bold text-on-surface mb-2">1. Get your free AI quote</h4>
-                        <p class="text-sm text-on-surface-variant">Start with item details to receive an initial quote.</p>
-                    </div>
-                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <h4 class="font-bold text-on-surface mb-2">2. Accept quote and upload video</h4>
-                        <p class="text-sm text-on-surface-variant">Accept the quote for further review and upload a video of your item.</p>
-                    </div>
-                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <h4 class="font-bold text-on-surface mb-2">3. We review and finalize price</h4>
-                        <p class="text-sm text-on-surface-variant">Our team reviews your submission and confirms a final price.</p>
-                    </div>
-                    <div class="bg-surface-container-lowest p-6 rounded-lg ambient-shadow">
-                        <h4 class="font-bold text-on-surface mb-2">4. Payment and pickup details</h4>
-                        <p class="text-sm text-on-surface-variant">We reach out with next steps for payment and pickup.</p>
+                    <div class="bg-surface-container rounded-[1.5rem] p-8 sm:p-10 flex flex-col justify-end min-h-[260px]">
+                        <h3 class="font-display text-3xl font-bold text-primary mb-4">Intelligent</h3>
+                        <p class="font-body text-on-surface-variant">AI-assisted pricing + admin review keeps offers fast and fair.</p>
                     </div>
                 </div>
             </section>
         </main>
 
-        <footer class="w-full py-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
+        <footer class="w-full py-12 px-4 sm:px-6 md:px-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant/15 text-xs font-body text-on-surface-variant max-w-[1440px] mx-auto">
             <div class="mb-4 md:mb-0 flex items-center gap-3">
                 <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-6 h-6 rounded object-cover">
                 <div>
@@ -253,22 +248,26 @@
             </div>
         </footer>
 
-        <nav class="md:hidden fixed bottom-0 w-full bg-surface-container-lowest ambient-shadow px-6 py-3 flex justify-between items-center z-50">
-            <button class="flex flex-col items-center gap-1 text-primary">
+        <nav class="md:hidden fixed bottom-0 w-full bg-surface-container-lowest ambient-shadow px-3 py-2 grid grid-cols-4 gap-2 items-center z-50">
+            <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 text-primary">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">storefront</span>
-                <span class="text-[10px] font-bold">Shop</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">favorite</span>
-                <span class="text-[10px] font-bold">Saved</span>
-            </button>
-            <a href="{% url 'ai_quote' %}" class="bg-secondary-container text-on-secondary-container w-12 h-12 rounded-full flex items-center justify-center -mt-8 shadow-lg">
-                <span class="material-symbols-outlined">request_quote</span>
+                <span class="text-[10px] font-bold">Home</span>
             </a>
-            <button class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">account_balance_wallet</span>
-                <span class="text-[10px] font-bold">Payouts</span>
-            </button>
+            <a href="{% url 'ai_quote' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
+                <span class="material-symbols-outlined">request_quote</span>
+                <span class="text-[10px] font-bold">AI Quote</span>
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'user_items' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span class="text-[10px] font-bold">My Items</span>
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
+                <span class="material-symbols-outlined">login</span>
+                <span class="text-[10px] font-bold">Sign in</span>
+            </a>
+            {% endif %}
             {% if user.is_authenticated %}
             <a href="{% url 'profile' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
                 <span class="material-symbols-outlined">person</span>

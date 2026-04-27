@@ -1,4 +1,5 @@
 {% extends "base_auth.html" %}
+{% load static %}
 {% block title %}Create Account — SHARE Bear{% endblock %}
 
 {% block body %}
@@ -20,7 +21,7 @@
         </div>
 
         <div class="relative z-10 flex items-center gap-3">
-            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-9 h-9 rounded-lg object-cover">
+            <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear" class="w-9 h-9 rounded-lg object-cover">
             <span class="font-display font-bold text-xl tracking-tightest text-on-primary">SHARE Bear</span>
         </div>
 
@@ -56,7 +57,7 @@
     <div class="flex-1 flex flex-col items-center justify-center px-6 py-12 lg:px-16 overflow-y-auto">
 
         <a href="/" class="lg:hidden flex items-center gap-3 mb-10">
-            <img src="/static/images/bearLogo.png" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
+            <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear" class="w-8 h-8 rounded-lg object-cover">
             <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
         </a>
 
@@ -80,7 +81,7 @@
             <form method="post" action="{% url 'signup' %}" class="space-y-4" novalidate>
                 {% csrf_token %}
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-semibold text-on-surface mb-1.5 font-body" for="id_first_name">First name</label>
                         <input
