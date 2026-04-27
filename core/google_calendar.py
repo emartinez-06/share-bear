@@ -24,16 +24,25 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 
 def is_pickup_calendar_configured() -> bool:
+    has_key_json = bool((getattr(settings, 'GOOGLE_SERVICE_ACCOUNT_KEY_JSON', '') or '').strip())
+    has_key_path = bool((settings.GOOGLE_SERVICE_ACCOUNT_KEY_PATH or '').strip())
     return bool(
-        (settings.GOOGLE_SERVICE_ACCOUNT_KEY_PATH or '').strip()
+        (has_key_json or has_key_path)
         and settings.GOOGLE_SLOT_SOURCE_CALENDAR_IDS
     )
 
 
 def _get_credentials() -> service_account.Credentials:
+    key_json = (getattr(settings, 'GOOGLE_SERVICE_ACCOUNT_KEY_JSON', '') or '').strip()
+    if key_json:
+        try:
+            payload = json.loads(key_json)
+        except json.JSONDecodeError as e:
+            raise RuntimeError('GOOGLE_SERVICE_ACCOUNT_KEY_JSON is invalid JSON') from e
+        return service_account.Credentials.from_service_account_info(payload, scopes=SCOPES)
     path = (settings.GOOGLE_SERVICE_ACCOUNT_KEY_PATH or '').strip()
     if not path:
-        raise RuntimeError('GOOGLE_SERVICE_ACCOUNT_KEY_PATH is not set')
+        raise RuntimeError('Google service-account credentials are not configured')
     return service_account.Credentials.from_service_account_file(path, scopes=SCOPES)
 
 

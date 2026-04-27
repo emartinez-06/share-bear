@@ -305,6 +305,30 @@ class ProfileAttachPickupViewTests(TestCase):
         self.q_other.refresh_from_db()
         self.assertEqual(self.q_other.google_event_id, '')
 
+    @patch('users.views.is_pickup_calendar_configured', return_value=True)
+    @patch('users.views.resolve_available_preset_slot')
+    @patch('users.views.create_pickup_event')
+    def test_attach_handles_calendar_runtime_error(self, m_create, m_res, m_cfg):
+        from datetime import datetime, timezone
+
+        from core.google_calendar import make_slot_post_key
+
+        st = datetime(2026, 6, 15, 15, 0, tzinfo=timezone.utc)
+        en = datetime(2026, 6, 15, 15, 30, tzinfo=timezone.utc)
+        m_res.return_value = (st, en)
+        m_create.side_effect = RuntimeError('invalid google credentials')
+        self.client.login(username='pickup1', password='pw1')
+        r = self.client.post(
+            '/accounts/profile/pickup/attach/',
+            {
+                'slot_key': make_slot_post_key('c@x', st, en),
+                'quote_ids': [str(self.q_ok.pk)],
+            },
+        )
+        self.assertEqual(r.status_code, 302)
+        self.q_ok.refresh_from_db()
+        self.assertEqual(self.q_ok.google_event_id, '')
+
     @override_settings(
         GOOGLE_SERVICE_ACCOUNT_KEY_PATH='',
         GOOGLE_SLOT_SOURCE_CALENDAR_IDS=[],
@@ -361,3 +385,29 @@ class PickupHourlySlotDefinitionTests(TestCase):
         self.assertEqual(len(on_sun), 6)
         self.assertEqual(on_sun[0][0].astimezone(tz).hour, 12)
         self.assertEqual(on_sun[-1][0].astimezone(tz).hour, 17)
+
+
+class GoogleCalendarCredentialConfigTests(TestCase):
+    @override_settings(
+        GOOGLE_SERVICE_ACCOUNT_KEY_JSON='{"type":"service_account","client_email":"svc@test.example"}',
+        GOOGLE_SERVICE_ACCOUNT_KEY_PATH='',
+        GOOGLE_SLOT_SOURCE_CALENDAR_IDS=['cal@example.com'],
+    )
+    def test_pickup_calendar_configured_with_json_env(self):
+        from core.google_calendar import is_pickup_calendar_configured
+
+        self.assertTrue(is_pickup_calendar_configured())
+
+    @override_settings(
+        GOOGLE_SERVICE_ACCOUNT_KEY_JSON='{"type":"service_account","client_email":"svc@test.example"}',
+        GOOGLE_SERVICE_ACCOUNT_KEY_PATH='',
+        GOOGLE_SLOT_SOURCE_CALENDAR_IDS=['cal@example.com'],
+    )
+    @patch('core.google_calendar.service_account.Credentials.from_service_account_info')
+    def test_get_credentials_prefers_json_env(self, m_from_info):
+        from core.google_calendar import _get_credentials
+
+        m_from_info.return_value = object()
+        creds = _get_credentials()
+        self.assertIsNotNone(creds)
+        m_from_info.assert_called_once()
