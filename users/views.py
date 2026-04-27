@@ -180,6 +180,7 @@ def profile_attach_pickup_view(request):
         for q in quotes:
             q.google_calendar_id = calendar_id
             q.google_event_id = event_id
+            q.booking_initiated = True
             q.pickup_event_html_link = link[:2000] if link else q.pickup_event_html_link
             # Store canonical preset times so availability matches _slot_taken_in_db
             q.pickup_starts_at = slot_start
@@ -188,6 +189,7 @@ def profile_attach_pickup_view(request):
                 update_fields=[
                     'google_calendar_id',
                     'google_event_id',
+                    'booking_initiated',
                     'pickup_event_html_link',
                     'pickup_starts_at',
                     'pickup_ends_at',
@@ -212,12 +214,24 @@ def user_items_view(request):
         and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
+    pickup_calendar_configured = is_pickup_calendar_configured()
+    pickup_slots: list[dict] = []
+    if pickup_calendar_configured:
+        try:
+            pickup_slots = list_candidate_slots()
+        except Exception:
+            messages.error(
+                request,
+                'Could not load pickup time slots. Check Calendar API configuration.',
+            )
     return render(
         request,
         'user_items.html',
         {
             'quotes': quotes,
             'approved_pickup_quotes': approved_pickup_quotes,
-            'google_booking_url': settings.GOOGLE_BOOKING_URL,
+            'pickup_slots': pickup_slots,
+            'pickup_calendar_configured': pickup_calendar_configured,
+            'pickup_display_timezone': (getattr(settings, 'GOOGLE_PICKUP_TIMEZONE', 'America/Chicago') or 'America/Chicago'),
         },
     )

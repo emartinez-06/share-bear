@@ -1,4 +1,7 @@
+from datetime import date, datetime, timezone as dt_timezone
+from unittest.mock import patch
 from urllib.parse import unquote
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -239,7 +242,7 @@ class ProfileAttachPickupViewTests(TestCase):
         self.client.login(username='pickup1', password='pw1')
         r = self.client.get('/accounts/profile/')
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, 'Calendar pickup is not configured')
+        self.assertNotContains(r, 'Schedule pickup')
 
     @patch('users.views.is_pickup_calendar_configured', return_value=True)
     @patch('users.views.resolve_available_preset_slot')
@@ -269,6 +272,7 @@ class ProfileAttachPickupViewTests(TestCase):
         self.q_ok.refresh_from_db()
         self.assertEqual(self.q_ok.google_calendar_id, 'cal@example.com')
         self.assertEqual(self.q_ok.google_event_id, 'evt123')
+        self.assertTrue(self.q_ok.booking_initiated)
         self.assertIn('calendar.google', self.q_ok.pickup_event_html_link)
         m_create.assert_called_once()
 
@@ -329,8 +333,8 @@ class PickupHourlySlotDefinitionTests(TestCase):
     def test_friday_nine_one_hour_blocks(self):
         from core.google_calendar import _generate_all_preset_instances
 
-        tmin = datetime(2026, 1, 1, 6, 0, tzinfo=timezone.utc)
-        tmax = datetime(2026, 1, 3, 6, 0, tzinfo=timezone.utc)
+        tmin = datetime(2026, 1, 1, 6, 0, tzinfo=dt_timezone.utc)
+        tmax = datetime(2026, 1, 3, 6, 0, tzinfo=dt_timezone.utc)
         inst = _generate_all_preset_instances(time_min=tmin, time_max=tmax)
         friday = date(2026, 1, 2)
         tz = ZoneInfo('America/Chicago')
@@ -348,8 +352,8 @@ class PickupHourlySlotDefinitionTests(TestCase):
     def test_sunday_six_one_hour_blocks(self):
         from core.google_calendar import _generate_all_preset_instances
 
-        tmin = datetime(2026, 1, 3, 6, 0, tzinfo=timezone.utc)
-        tmax = datetime(2026, 1, 5, 6, 0, tzinfo=timezone.utc)
+        tmin = datetime(2026, 1, 3, 6, 0, tzinfo=dt_timezone.utc)
+        tmax = datetime(2026, 1, 5, 6, 0, tzinfo=dt_timezone.utc)
         inst = _generate_all_preset_instances(time_min=tmin, time_max=tmax)
         sun = date(2026, 1, 4)
         tz = ZoneInfo('America/Chicago')
