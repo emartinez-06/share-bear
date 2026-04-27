@@ -348,10 +348,8 @@ def create_pickup_event(
             }
         },
     }
-    if user_email:
-        body['attendees'] = [
-            {'email': user_email, 'responseStatus': 'needsAction'},
-        ]
+    # Service-account inserts can 403 when inviting attendees without domain-wide delegation.
+    # Keep pickup ownership in admin calendar and persist user email in description.
     try:
         service = get_calendar_service()
         return (
