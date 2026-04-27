@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal, InvalidOperation
 
 from django import forms
@@ -66,7 +67,32 @@ class AIQuoteForm(forms.Form):
             raise forms.ValidationError(
                 "Enter both make and model, or check “Unknown make and model” for a generic quote."
             )
+        item_name = (cleaned.get("item_name") or "").strip()
+        description = (cleaned.get("description") or "").strip()
+        if _looks_like_gibberish(item_name, description):
+            raise forms.ValidationError(
+                "Please enter a real item name and a clearer description."
+            )
         return cleaned
+
+
+def _looks_like_gibberish(item_name: str, description: str) -> bool:
+    text = f"{item_name} {description}".strip().lower()
+    if re.search(r"(asdf|qwer|zxcv|hjkl|poiuy|lkjh|mnbv)", text):
+        return True
+    words = re.findall(r"[a-z]{2,}", text)
+    if len(words) < 3:
+        return True
+
+    alpha_chars = sum(1 for c in text if c.isalpha())
+    if alpha_chars < 10:
+        return True
+
+    vowel_words = sum(1 for w in words if re.search(r"[aeiouy]", w))
+    if (vowel_words / len(words)) < 0.35:
+        return True
+
+    return False
 
 
 _VIDEO_TYPES = {

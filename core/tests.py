@@ -10,8 +10,8 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from googleapiclient.errors import HttpError
 
-from core.gemini_quote import extract_share_bear_offer_amount, format_share_bear_offer_display
-from core.forms import AdminAcceptQuoteForm, normalize_confirmed_buyback_offer
+from core.gemini_quote import extract_confidence_level, extract_share_bear_offer_amount, format_share_bear_offer_display
+from core.forms import AIQuoteForm, AdminAcceptQuoteForm, normalize_confirmed_buyback_offer
 from core.models import AIQuote
 from core.views import build_approval_mailto_url, build_pickup_location_mailto_url
 
@@ -19,6 +19,7 @@ from core.views import build_approval_mailto_url, build_pickup_location_mailto_u
 class ExtractOfferTests(TestCase):
     def test_line_with_labels(self):
         text = """
+- Item confidence: HIGH
 - Estimated retail (USD): $500
 - SHARE Bear offer (USD): $150
 - Notes / assumptions: Example.
@@ -27,11 +28,117 @@ class ExtractOfferTests(TestCase):
         self.assertEqual(format_share_bear_offer_display(text), "$150")
 
     def test_second_amount_fallback(self):
-        text = "Retail is about $400. The buy-back is $120."
+        text = "Item confidence: HIGH\nRetail is about $400. The buy-back is $120."
         self.assertEqual(extract_share_bear_offer_amount(text), "$120")
 
     def test_single_amount(self):
         self.assertEqual(extract_share_bear_offer_amount("We can offer $99 total."), "$99")
+        text_with_confidence = "Item confidence: HIGH\nWe can offer $99 total."
+        self.assertEqual(format_share_bear_offer_display(text_with_confidence), "$30")
+
+    def test_uncertain_phrase_with_amount_displays_zero(self):
+        text = (
+            "Item confidence: MEDIUM\n"
+            "Estimated retail (USD): $450\n"
+            "SHARE Bear offer (USD): $135\n"
+            "Notes: There is insufficient information about condition, so this is uncertain."
+        )
+        self.assertEqual(format_share_bear_offer_display(text), "$0")
+
+    def test_uncertain_phrase_without_amount_displays_zero(self):
+        text = "Item confidence: MEDIUM\nUnable to estimate a fair value because there is not enough info."
+        self.assertEqual(format_share_bear_offer_display(text), "$0")
+
+    def test_confident_quote_still_displays_amount(self):
+        text = (
+            "Item confidence: HIGH\n"
+            "Estimated retail (USD): $300\n"
+            "SHARE Bear offer (USD): $90\n"
+            "Notes: Typical market resale for this model in working condition."
+        )
+        self.assertEqual(format_share_bear_offer_display(text), "$90")
+
+    def test_offer_is_recalculated_from_retail_when_model_offer_mismatches(self):
+        text = (
+            "Item confidence: HIGH\n"
+            "Estimated retail (USD): $500\n"
+            "SHARE Bear offer (USD): $45\n"
+            "Notes: Example mismatch."
+        )
+        self.assertEqual(format_share_bear_offer_display(text), "$150")
+
+
+class ConfidenceLevelTests(TestCase):
+    def test_low_confidence_returns_zero(self):
+        text = (
+            "Item confidence: LOW\n"
+            "Estimated retail (USD): $300\n"
+            "SHARE Bear offer (USD): $90\n"
+            "Notes: Cannot verify this is a real product."
+        )
+        self.assertEqual(extract_confidence_level(text), "LOW")
+        self.assertEqual(format_share_bear_offer_display(text), "$0")
+
+    def test_medium_confidence_returns_offer(self):
+        text = (
+            "Item confidence: MEDIUM\n"
+            "Estimated retail (USD): $400\n"
+            "SHARE Bear offer (USD): $120\n"
+            "Notes: Item seems real but limited info."
+        )
+        self.assertEqual(extract_confidence_level(text), "MEDIUM")
+        self.assertEqual(format_share_bear_offer_display(text), "$120")
+
+    def test_high_confidence_returns_offer(self):
+        text = (
+            "Item confidence: HIGH\n"
+            "Estimated retail (USD): $600\n"
+            "SHARE Bear offer (USD): $180\n"
+            "Notes: Recognizable product with verifiable market data."
+        )
+        self.assertEqual(extract_confidence_level(text), "HIGH")
+        self.assertEqual(format_share_bear_offer_display(text), "$180")
+
+    def test_missing_confidence_defaults_to_low(self):
+        text = (
+            "Estimated retail (USD): $500\n"
+            "SHARE Bear offer (USD): $150\n"
+            "Notes: No confidence line in response."
+        )
+        self.assertEqual(extract_confidence_level(text), "LOW")
+        self.assertEqual(format_share_bear_offer_display(text), "$0")
+
+    def test_confidence_case_insensitive(self):
+        self.assertEqual(extract_confidence_level("Item confidence: high"), "HIGH")
+        self.assertEqual(extract_confidence_level("Item confidence: Medium"), "MEDIUM")
+        self.assertEqual(extract_confidence_level("Item confidence: low"), "LOW")
+
+
+class AIQuoteFormValidationTests(TestCase):
+    def test_rejects_gibberish_item_text(self):
+        form = AIQuoteForm(
+            data={
+                "item_name": "fjsdfdsj",
+                "description": "asdfghjkl qwrtyuiop",
+                "make": "Apple",
+                "model": "M3",
+                "unknown_make_model": False,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("real item name", str(form.errors))
+
+    def test_accepts_normal_item_text(self):
+        form = AIQuoteForm(
+            data={
+                "item_name": "MacBook Pro 14",
+                "description": "Used laptop in good condition with charger included.",
+                "make": "Apple",
+                "model": "M3 Pro",
+                "unknown_make_model": False,
+            }
+        )
+        self.assertTrue(form.is_valid())
 
 
 class DevSuccessPreviewTests(TestCase):

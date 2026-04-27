@@ -1,8 +1,18 @@
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
 
 _USD = re.compile(r"\$[\d,]+(?:\.\d{2})?")
+_UNCERTAINTY_PATTERNS = (
+    re.compile(r"\bnot enough info(?:rmation)?\b", re.I),
+    re.compile(r"\binsufficient information\b", re.I),
+    re.compile(r"\buncertain(?:ty)?\b", re.I),
+    re.compile(r"\bunable to estimate\b", re.I),
+    re.compile(r"\bcannot estimate\b", re.I),
+    re.compile(r"\bunknown condition\b", re.I),
+)
+_CONFIDENCE_PATTERN = re.compile(r"\b(HIGH|MEDIUM|LOW)\b", re.I)
 
 
 def extract_share_bear_offer_amount(quote_text: str) -> str | None:
@@ -30,11 +40,73 @@ def extract_share_bear_offer_amount(quote_text: str) -> str | None:
     return None
 
 
+def extract_confidence_level(quote_text: str) -> str:
+    """
+    Parse confidence level (HIGH, MEDIUM, LOW) from the Gemini response.
+    Returns 'LOW' if not found (safe fallback).
+    """
+    if not (quote_text or "").strip():
+        return "LOW"
+    text = quote_text.replace("\r\n", "\n")
+    for line in text.splitlines():
+        s = line.strip().lower()
+        if "confidence" in s:
+            m = _CONFIDENCE_PATTERN.search(line)
+            if m:
+                return m.group(1).upper()
+    return "LOW"
+
+
 def format_share_bear_offer_display(quote_text: str) -> str:
-    amt = extract_share_bear_offer_amount(quote_text)
-    if amt:
-        return amt
-    return "—"
+    confidence = extract_confidence_level(quote_text)
+    if confidence == "LOW":
+        return "$0"
+    if is_uncertain_quote_text(quote_text):
+        return "$0"
+    retail = extract_estimated_retail_amount(quote_text)
+    if retail is None:
+        return "$0"
+    return compute_share_bear_offer_from_retail(retail)
+
+
+def is_uncertain_quote_text(quote_text: str) -> bool:
+    text = (quote_text or "").strip()
+    if not text:
+        return False
+    return any(p.search(text) for p in _UNCERTAINTY_PATTERNS)
+
+
+def extract_estimated_retail_amount(quote_text: str) -> Decimal | None:
+    if not (quote_text or "").strip():
+        return None
+    text = quote_text.replace("\r\n", "\n")
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if re.search(r"\bretail\b", s, re.I):
+            m = _USD.search(s)
+            if m:
+                return parse_usd_amount(m.group(0))
+    amounts = _USD.findall(text)
+    if amounts:
+        return parse_usd_amount(amounts[0])
+    return None
+
+
+def parse_usd_amount(raw_amount: str) -> Decimal | None:
+    clean = (raw_amount or "").strip().replace("$", "").replace(",", "")
+    if not clean:
+        return None
+    try:
+        return Decimal(clean)
+    except InvalidOperation:
+        return None
+
+
+def compute_share_bear_offer_from_retail(retail_amount: Decimal) -> str:
+    offer = (retail_amount * Decimal("0.30")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return f"${int(offer):,}"
 
 
 def build_quote_prompt(*, item_name: str, description: str, make: str, model: str, unknown_make_model: bool) -> str:
@@ -50,9 +122,10 @@ def build_quote_prompt(*, item_name: str, description: str, make: str, model: st
     return f"""You are a pricing assistant for SHARE Bear, a student direct buy-back program.
 
 Task:
-1) Estimate a typical current US retail price (or MSRP for new items) for the described item in average used-good condition unless the description says otherwise.
-2) Compute SHARE Bear’s buy-back offer as exactly 30% of that retail estimate (one dollar amount, rounded to whole dollars).
-3) Explain briefly (2–3 sentences) how you arrived at the retail estimate.
+1) First, assess whether this is a recognizable real product you can price with confidence.
+2) Estimate a typical current US retail price (or MSRP for new items) for the described item in average used-good condition unless the description says otherwise.
+3) Compute SHARE Bear's buy-back offer as exactly 30% of that retail estimate (one dollar amount, rounded to whole dollars).
+4) Explain briefly (2–3 sentences) how you arrived at the retail estimate.
 
 Constraints:
 - Output in USD.
@@ -67,6 +140,10 @@ Description:
 {description}
 
 Format the reply with clear sections:
+- Item confidence: HIGH, MEDIUM, or LOW
+  (HIGH = recognizable real product with verifiable market data;
+   MEDIUM = item seems real but limited info available;
+   LOW = cannot verify this is a real product, description unclear or nonsensical)
 - Estimated retail (USD)
 - SHARE Bear offer (USD)
 - Notes / assumptions

@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -66,7 +67,8 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    quotes = list(AIQuote.objects.filter(user=request.user).order_by('-created_at')[:100])
+    quotes_qs = AIQuote.objects.filter(user=request.user).order_by('-created_at')
+    quotes_page = Paginator(quotes_qs, 25).get_page(request.GET.get('page'))
     pickup_slots: list[dict] = []
     if is_pickup_calendar_configured():
         try:
@@ -76,19 +78,21 @@ def profile_view(request):
                 request,
                 'Could not load pickup time slots. Check Calendar API configuration.',
             )
-    eligible = [
-        q
-        for q in quotes
-        if q.quote_accepted_by_admin
-        and not q.picked_up
-        and not q.booking_initiated
-        and not (q.google_event_id or '').strip()
-    ]
+    eligible = list(
+        AIQuote.objects.filter(
+            user=request.user,
+            quote_accepted_by_admin=True,
+            picked_up=False,
+            booking_initiated=False,
+            google_event_id='',
+        ).order_by('-created_at')
+    )
     return render(
         request,
         'users/profile.html',
         {
-            'quotes': quotes,
+            'quotes': list(quotes_page.object_list),
+            'quotes_page': quotes_page,
             'pickup_slots': pickup_slots,
             'pickup_calendar_configured': is_pickup_calendar_configured(),
             'pickup_eligible_quotes': eligible,
@@ -223,15 +227,17 @@ def profile_attach_pickup_view(request):
 
 @login_required
 def user_items_view(request):
-    quotes = list(AIQuote.objects.filter(user=request.user).order_by('-created_at'))
-    approved_pickup_quotes = [
-        q
-        for q in quotes
-        if q.quote_accepted_by_admin
-        and not q.picked_up
-        and not q.booking_initiated
-        and not (q.google_event_id or '').strip()
-    ]
+    quotes_qs = AIQuote.objects.filter(user=request.user).order_by('-created_at')
+    quotes_page = Paginator(quotes_qs, 25).get_page(request.GET.get('page'))
+    approved_pickup_quotes = list(
+        AIQuote.objects.filter(
+            user=request.user,
+            quote_accepted_by_admin=True,
+            picked_up=False,
+            booking_initiated=False,
+            google_event_id='',
+        ).order_by('-created_at')
+    )
     pickup_calendar_configured = is_pickup_calendar_configured()
     pickup_slots: list[dict] = []
     if pickup_calendar_configured:
@@ -246,7 +252,8 @@ def user_items_view(request):
         request,
         'user_items.html',
         {
-            'quotes': quotes,
+            'quotes': list(quotes_page.object_list),
+            'quotes_page': quotes_page,
             'approved_pickup_quotes': approved_pickup_quotes,
             'pickup_slots': pickup_slots,
             'pickup_calendar_configured': pickup_calendar_configured,
