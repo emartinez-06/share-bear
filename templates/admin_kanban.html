@@ -99,6 +99,7 @@
                         <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
                         <p class="text-xs text-on-surface-variant font-body">Approved {{ q.quote_reviewed_at|date:"M j, Y" }}</p>
                         <div class="mt-2 flex flex-wrap gap-1.5">
+                            {% if q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5">Booked</span>{% endif %}
                             {% if q.booking_link %}<span class="text-[10px] font-medium rounded-full bg-secondary-container/40 text-on-secondary-container px-2 py-0.5">Booking link</span>{% endif %}
                         </div>
                     </button>
@@ -214,9 +215,14 @@
             <span class="material-symbols-outlined">close</span>
         </button>
         <div class="mb-5">
-            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2 py-0.5 mb-2">
-                <span class="material-symbols-outlined text-xs">check_circle</span> Approved
-            </span>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2 py-0.5">
+                    <span class="material-symbols-outlined text-xs">check_circle</span> Approved
+                </span>
+                {% if q.booking_initiated %}
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200 rounded-full px-2 py-0.5">Booked</span>
+                {% endif %}
+            </div>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
         {% if q.has_video and q.signed_video_url %}
@@ -271,6 +277,14 @@
                 Revert to Awaiting
             </button>
         </form>
+        {% if q.booking_initiated %}
+        <form method="post" action="{% url 'admin_kanban_reset_booking' quote_id=q.pk %}" class="mt-2">
+            {% csrf_token %}
+            <button type="submit" class="w-full text-sm font-semibold font-body text-blue-700 border border-blue-200 px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-colors">
+                Reset booking
+            </button>
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endfor %}

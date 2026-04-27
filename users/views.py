@@ -77,6 +77,7 @@ def profile_view(request):
         for q in quotes
         if q.quote_accepted_by_admin
         and not q.picked_up
+        and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
     return render(
@@ -208,6 +209,7 @@ def user_items_view(request):
         for q in quotes
         if q.quote_accepted_by_admin
         and not q.picked_up
+        and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
     return render(
