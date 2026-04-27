@@ -93,20 +93,35 @@
                     </select>
                 </div>
                 <div>
-                    <p class="block text-sm font-semibold text-on-surface mb-2">Items for this pickup</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-semibold text-on-surface">Items for this pickup</p>
+                        <span class="text-xs text-on-surface-variant font-body">All items pre-selected — uncheck any you want to exclude</span>
+                    </div>
                     <ul class="space-y-2 max-h-48 overflow-y-auto rounded-lg border border-outline-variant/30 p-3">
                         {% for q in pickup_eligible_quotes %}
                         <li class="flex items-center gap-3 text-sm font-body">
-                            <input type="checkbox" name="quote_ids" value="{{ q.pk }}" id="pq-{{ q.pk }}" class="rounded border-outline-variant text-primary focus:ring-primary/30" />
+                            <input type="checkbox" name="quote_ids" value="{{ q.pk }}" id="pq-{{ q.pk }}" checked class="rounded border-outline-variant text-primary focus:ring-primary/30" />
                             <label for="pq-{{ q.pk }}" class="text-on-surface cursor-pointer">{{ q.item_name }} <span class="text-on-surface-variant">({{ q.offer_display }})</span></label>
                         </li>
                         {% endfor %}
                     </ul>
                 </div>
-                <button type="submit" class="w-full sm:w-auto font-display font-bold text-on-primary bg-primary px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">
+                <button type="submit" id="pickup-submit-btn" class="w-full sm:w-auto font-display font-bold text-on-primary bg-primary px-6 py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
                     Book selected items
                 </button>
             </form>
+            <script>
+            (function () {
+                var form = document.getElementById('pickup-submit-btn').closest('form');
+                var btn = document.getElementById('pickup-submit-btn');
+                function sync() {
+                    var any = form.querySelectorAll('input[name="quote_ids"]:checked').length > 0;
+                    btn.disabled = !any;
+                }
+                form.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
         </div>
     </section>
     {% elif pickup_calendar_configured and pickup_slots and not pickup_eligible_quotes %}
@@ -116,10 +131,6 @@
     {% elif pickup_calendar_configured and not pickup_slots %}
     <section class="fade-up max-w-3xl mx-auto mt-10">
         <p class="text-sm text-on-surface-variant font-body bg-surface-container-lowest rounded-xl border border-outline-variant/20 px-5 py-4">No open pickup times are available in the listing window. Check back later or contact SHARE Bear.</p>
-    </section>
-    {% elif not pickup_calendar_configured %}
-    <section class="fade-up max-w-3xl mx-auto mt-10">
-        <p class="text-sm text-on-surface-variant font-body bg-amber-50/80 rounded-xl border border-amber-200/60 px-5 py-4">Calendar pickup is not configured for this site yet.</p>
     </section>
     {% endif %}
 

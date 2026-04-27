@@ -62,10 +62,13 @@
             <p class="text-on-surface-variant text-sm sm:text-base font-body mb-8 max-w-md mx-auto leading-relaxed">
                 SHARE Bear’s buy-back offer for <span class="font-semibold text-on-surface">{{ item_name }}</span>
             </p>
-            <div class="mb-8 rounded-2xl bg-surface-container ambient-shadow border border-primary/20 px-8 py-10 sm:py-12">
+            <div class="mb-4 rounded-2xl bg-surface-container ambient-shadow border border-primary/20 px-8 py-10 sm:py-12">
                 <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-body mb-3">We’re willing to offer</p>
                 <p class="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl text-primary tabular-nums tracking-tight">{{ offer_display }}</p>
             </div>
+            <p class="mb-8 text-xs text-on-surface-variant font-body leading-relaxed max-w-sm mx-auto">
+                <span class="font-semibold text-on-surface">Disclaimer:</span> This AI-generated price is an estimate and may be higher or lower than the final offer. All items are reviewed together for a more precise multi-item quote.
+            </p>
 
             {% if quote %}
             <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7">
@@ -79,14 +82,13 @@
                 </div>
                 {% else %}
                 {% if quote.has_video %}
-                <p class="text-sm text-on-surface font-body mb-4">
-                    <span class="inline-flex items-center gap-1.5 font-medium text-on-surface">
-                        <span class="material-symbols-outlined text-primary text-base">check_circle</span>
-                        Video received — review in progress
-                    </span>
-                </p>
-                <p class="text-xs text-on-surface-variant font-body">You can replace the video before we confirm (same form below).</p>
-                {% endif %}
+                <div class="text-center py-4">
+                    <span class="material-symbols-outlined text-5xl text-primary mb-3 block">inventory_2</span>
+                    <p class="font-display font-bold text-xl text-on-surface mb-1">Item logged</p>
+                    <p class="text-sm text-on-surface-variant font-body mb-5">Your video is under review. The SHARE Bear team will confirm your offer shortly.</p>
+                    <a href="{% url 'ai_quote' %}" class="inline-flex justify-center items-center font-semibold text-on-secondary-container bg-secondary-container px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">Log another item</a>
+                </div>
+                {% else %}
                 {% if not video_upload_configured %}
                 <p class="text-sm text-amber-900 bg-amber-50 border border-amber-200/80 rounded-lg px-4 py-3 font-body" role="status">
                     Video upload is not configured for this environment (missing Supabase storage settings).
@@ -100,44 +102,13 @@
                         <input type="file" name="video" id="id_video" accept="video/mp4,video/webm,video/quicktime,video/*" required class="block w-full text-sm text-on-surface file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold" />
                     </div>
                     <button type="submit" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 px-6 py-3 rounded-xl transition-opacity w-full sm:w-auto">
-                        {% if quote.has_video %}Replace video{% else %}Upload video to accept this offer{% endif %}
+                        Upload video to accept this offer
                     </button>
                 </form>
                 {% endif %}
                 {% endif %}
-            </div>
-
-            {% if booking_link_form %}
-            <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7">
-                <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">
-                    <span class="material-symbols-outlined align-middle text-primary mr-1 text-xl" style="vertical-align:-4px">calendar_month</span>
-                    Schedule your pickup
-                </h2>
-                <p class="text-sm text-on-surface-variant font-body leading-relaxed mb-5">
-                    Book a time to drop off your item. Paste your Microsoft Booking link below so the SHARE Bear team can confirm your slot.
-                </p>
-                {% if quote.booking_link %}
-                <p class="text-sm font-body mb-4">
-                    <span class="inline-flex items-center gap-1.5 font-medium text-on-surface">
-                        <span class="material-symbols-outlined text-primary text-base">check_circle</span>
-                        Booking link saved
-                    </span>
-                    — <a href="{{ quote.booking_link }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline text-xs break-all">{{ quote.booking_link }}</a>
-                </p>
                 {% endif %}
-                <form method="post" action="{% url 'ai_quote_success_detail' quote_id=quote.pk %}" class="space-y-4">
-                    {% csrf_token %}
-                    <div>
-                        <label for="id_booking_link" class="block text-sm font-semibold text-on-surface mb-1.5">{{ booking_link_form.booking_link.label }}</label>
-                        {{ booking_link_form.booking_link }}
-                        {% if booking_link_form.booking_link.errors %}<p class="text-red-600 text-xs mt-1">{{ booking_link_form.booking_link.errors.0 }}</p>{% endif %}
-                    </div>
-                    <button type="submit" class="font-display font-bold text-on-primary bg-primary px-6 py-3 rounded-xl hover:opacity-90 transition-opacity w-full sm:w-auto">
-                        {% if quote.booking_link %}Update booking link{% else %}Save booking link{% endif %}
-                    </button>
-                </form>
             </div>
-            {% endif %}
             {% elif dev_preview %}
             <div class="mb-8 w-full text-left rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-6 py-6 sm:px-8 sm:py-7 opacity-[0.98]">
                 <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-2">Accept this offer</h2>
@@ -194,17 +165,22 @@
 </div>
 
 {% if show_confetti %}
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  if (typeof confetti !== 'function') return;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce) return;
-  const o = { origin: { y: 0.65 }, zIndex: 0 };
-  confetti({ ...o, particleCount: 80, spread: 60 });
-  setTimeout(function () { confetti({ ...o, particleCount: 60, spread: 100, startVelocity: 35 }); }, 200);
-  setTimeout(function () { confetti({ ...o, particleCount: 50, spread: 120, startVelocity: 25, scalar: 0.9 }); }, 400);
-});
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js';
+  s.onload = function () {
+    if (typeof confetti !== 'function') return;
+    var o = { origin: { y: 0.6 }, zIndex: 9999 };
+    confetti({ ...o, particleCount: 120, spread: 70, startVelocity: 45 });
+    setTimeout(function () { confetti({ ...o, particleCount: 80, spread: 110, startVelocity: 38, scalar: 1.1 }); }, 180);
+    setTimeout(function () { confetti({ ...o, particleCount: 60, spread: 140, startVelocity: 28, scalar: 0.85, origin: { y: 0.55 } }); }, 380);
+    setTimeout(function () { confetti({ ...o, particleCount: 40, spread: 80, startVelocity: 50, origin: { x: 0.1, y: 0.7 } }); }, 550);
+    setTimeout(function () { confetti({ ...o, particleCount: 40, spread: 80, startVelocity: 50, origin: { x: 0.9, y: 0.7 } }); }, 650);
+  };
+  document.head.appendChild(s);
+})();
 </script>
 {% endif %}
 
