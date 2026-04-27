@@ -1,5 +1,6 @@
 {% extends "base_auth.html" %}
 {% load static %}
+{% load tz %}
 {% block title %}My Items — SHARE Bear{% endblock %}
 
 {% block body %}
@@ -63,8 +64,12 @@
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="font-display font-bold text-lg text-on-surface">Schedule Pickup</h2>
-                    {% if approved_pickup_quotes %}
-                    <p class="text-sm text-on-surface-variant font-body mt-1">Choose approved items and open Google Booking to pick a pickup time.</p>
+                    {% if approved_pickup_quotes and pickup_slots %}
+                    <p class="text-sm text-on-surface-variant font-body mt-1">Choose approved items and an open time slot to book pickup in Google Calendar.</p>
+                    {% elif approved_pickup_quotes and not pickup_calendar_configured %}
+                    <p class="text-sm text-on-surface-variant font-body mt-1">Pickup scheduling is not configured yet. Contact SHARE Bear support.</p>
+                    {% elif approved_pickup_quotes and not pickup_slots %}
+                    <p class="text-sm text-on-surface-variant font-body mt-1">No open pickup time slots are available right now. Check back later.</p>
                     {% else %}
                     <p class="text-sm text-on-surface-variant font-body mt-1">No approved items are ready for pickup yet. Once approved, they will appear here.</p>
                     {% endif %}
@@ -72,8 +77,8 @@
                 <button
                     id="open-pickup-modal"
                     type="button"
-                    class="text-sm font-semibold font-body px-4 py-2 rounded-full transition-all {% if approved_pickup_quotes %}bg-primary text-on-primary hover:bg-primary-container{% else %}bg-surface-container text-on-surface-variant cursor-not-allowed{% endif %}"
-                    {% if not approved_pickup_quotes %}disabled aria-disabled="true"{% endif %}
+                    class="text-sm font-semibold font-body px-4 py-2 rounded-full transition-all {% if approved_pickup_quotes and pickup_slots and pickup_calendar_configured %}bg-primary text-on-primary hover:bg-primary-container{% else %}bg-surface-container text-on-surface-variant cursor-not-allowed{% endif %}"
+                    {% if not approved_pickup_quotes or not pickup_slots or not pickup_calendar_configured %}disabled aria-disabled="true"{% endif %}
                 >
                     Book pickup time
                 </button>
@@ -109,7 +114,7 @@
                         {% endif %}
                         {% if quote.picked_up %}
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-slate-100 text-slate-900 px-2 py-0.5 font-medium">Picked up</span>
-                        {% elif quote.booking_initiated and not quote.picked_up %}
+                        {% elif quote.google_event_id or quote.booking_initiated %}
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 font-medium">Booked</span>
                         {% elif quote.quote_accepted_by_admin %}
                         <span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 font-medium">Offer confirmed</span>
@@ -178,8 +183,21 @@
                     <button id="cancel-pickup-modal" type="button" class="text-sm font-semibold font-body text-on-surface-variant px-4 py-2 rounded-full border border-outline-variant hover:bg-surface-container transition-colors">
                         Cancel
                     </button>
-                    <form id="booking-initiate-form" method="post" action="{% url 'booking_initiate' %}">
+                    <form id="booking-initiate-form" method="post" action="{% url 'profile_attach_pickup' %}">
                         {% csrf_token %}
+                        {% if pickup_slots %}
+                        <div class="mb-3">
+                            <label for="pickup-slot-select" class="block text-xs font-semibold text-on-surface mb-1.5 uppercase tracking-wide">Pickup time</label>
+                            <select name="slot_key" id="pickup-slot-select" required class="w-full min-w-[280px] rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2 text-sm text-on-surface font-body">
+                                <option value="">Select a time slot…</option>
+                                {% for s in pickup_slots %}
+                                <option value="{{ s.postKey }}">{% if s.start %}{% timezone pickup_display_timezone %}{{ s.summary }} — {{ s.start|date:"D M j, Y" }}, {{ s.start|date:"g:i A" }}{% if s.end %} – {{ s.end|date:"g:i A" }}{% endif %}{% endtimezone %}{% else %}{{ s.summary }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% else %}
+                        <p class="mb-3 text-xs text-on-surface-variant font-body">No time slots are currently available.</p>
+                        {% endif %}
                         <div id="booking-quote-inputs"></div>
                         <button
                             type="submit"
@@ -187,7 +205,7 @@
                             disabled
                             class="text-sm font-semibold font-body px-4 py-2 rounded-full bg-primary text-on-primary opacity-50 cursor-not-allowed"
                         >
-                            Open Google Booking
+                            Book pickup in Google Calendar
                         </button>
                     </form>
                 </div>
@@ -205,6 +223,7 @@
         const cancelBtn = document.getElementById('cancel-pickup-modal');
         const bookingBtn = document.getElementById('open-google-booking');
         const bookingInputsContainer = document.getElementById('booking-quote-inputs');
+        const slotSelect = document.getElementById('pickup-slot-select');
         const checkboxes = Array.from(document.querySelectorAll('.pickup-item-checkbox'));
         const summaryField = document.getElementById('pickup-selected-summary');
         const copyBtn = document.getElementById('copy-selected-items');
@@ -227,18 +246,17 @@
         };
 
         const updateSelectedSummary = function() {
-            const selected = checkboxes
-                .filter(function(input) { return input.checked; })
-                .map(function(input) {
+            const selectedInputs = checkboxes.filter(function(input) { return input.checked; });
+            const selectedSummary = selectedInputs.map(function(input) {
                     const offer = input.getAttribute('data-offer') || '';
                     return '- ' + input.value + (offer ? ' (' + offer + ')' : '');
                 });
 
-            summaryField.value = selected.length ? selected.join('\n') : '';
+            summaryField.value = selectedSummary.length ? selectedSummary.join('\n') : '';
 
             if (bookingInputsContainer) {
                 bookingInputsContainer.innerHTML = '';
-                selected.forEach(function(cb) {
+                selectedInputs.forEach(function(cb) {
                     var input = document.createElement('input');
                     input.type = 'hidden';
                     input.name = 'quote_ids';
@@ -247,7 +265,8 @@
                 });
             }
 
-            if (selected.length > 0) {
+            const canBook = selectedInputs.length > 0 && (!!slotSelect && !!slotSelect.value);
+            if (canBook) {
                 bookingBtn.disabled = false;
                 bookingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
@@ -276,6 +295,9 @@
         checkboxes.forEach(function(input) {
             input.addEventListener('change', updateSelectedSummary);
         });
+        if (slotSelect) {
+            slotSelect.addEventListener('change', updateSelectedSummary);
+        }
 
         if (copyBtn) {
             copyBtn.addEventListener('click', function() {
