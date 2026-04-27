@@ -9,7 +9,8 @@
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` | Yes | Path to a **service account JSON** key file. Do not commit. |
+| `GOOGLE_SERVICE_ACCOUNT_KEY_JSON` | Yes* | Preferred for Vercel/serverless. Full service account JSON content as one env var value. Do not commit. |
+| `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` | Yes* | Path to a **service account JSON** key file. Use when a local/server file is available. Do not commit. |
 | `GOOGLE_SLOT_SOURCE_CALENDAR_IDS` | Yes | Comma-separated calendar **IDs** where new pickup **events are created** (first ID is used for `insert`), e.g. `sharebearhelp@gmail.com`. The embed URL `...?src=...` encodes the same address. |
 | `GOOGLE_PICKUP_SLOT_DAYS_AHEAD` | No | Default `30`. How far out to list preset instances. |
 | `GOOGLE_PICKUP_TIMEZONE` | No | Default `America/Chicago`. Used to interpret weekly `HH:MM` windows. |
@@ -23,10 +24,12 @@
 3. You do not need to pre-create empty “slot” events; the app inserts each booking as a new event. Optional: add that calendar to a website embed for visibility.
 4. Set env vars on the host; restart the app.
 
+\* Configure **either** `GOOGLE_SERVICE_ACCOUNT_KEY_JSON` **or** `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`.
+
 ## Slot visibility
 
 - A preset instance is **hidden** if any `AIQuote` already has that **exact** `pickup_starts_at` and a non-empty `google_event_id` (a completed booking in the app).
 
 ## Key rotation
 
-If a service account or API key is exposed, create a new key, update `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, and revoke the old key in Google Cloud.
+If a service account or API key is exposed, create a new key, update `GOOGLE_SERVICE_ACCOUNT_KEY_JSON` or `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, and revoke the old key in Google Cloud.

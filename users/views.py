@@ -159,15 +159,22 @@ def profile_attach_pickup_view(request):
             return redirect('profile')
         slot_start, slot_end = resolved
 
-        claimed = create_pickup_event(
-            calendar_id,
-            slot_start,
-            slot_end,
-            user_email=user_email,
-            user_label=user_label,
-            quote_ids=quote_ids,
-            item_names=[q.item_name for q in quotes],
-        )
+        try:
+            claimed = create_pickup_event(
+                calendar_id,
+                slot_start,
+                slot_end,
+                user_email=user_email,
+                user_label=user_label,
+                quote_ids=quote_ids,
+                item_names=[q.item_name for q in quotes],
+            )
+        except Exception:
+            messages.error(
+                request,
+                'Pickup scheduling is temporarily unavailable. Please try again shortly.',
+            )
+            return redirect('profile')
         if not claimed:
             messages.error(
                 request,

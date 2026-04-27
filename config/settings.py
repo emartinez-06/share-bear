@@ -246,6 +246,8 @@ def _load_pickup_weekly_slots() -> list[dict]:
 
 
 GOOGLE_SERVICE_ACCOUNT_KEY_PATH = (os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY_PATH') or '').strip() or None
+# Preferred on Vercel/serverless: full service-account JSON string (not a filesystem path).
+GOOGLE_SERVICE_ACCOUNT_KEY_JSON = (os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY_JSON') or '').strip() or None
 # Comma-separated calendar ID where new pickup events are created (e.g. sharebearhelp@gmail.com)
 GOOGLE_SLOT_SOURCE_CALENDAR_IDS = _env_csv('GOOGLE_SLOT_SOURCE_CALENDAR_IDS')
 GOOGLE_PICKUP_SLOT_DAYS_AHEAD = int(os.environ.get('GOOGLE_PICKUP_SLOT_DAYS_AHEAD', '30'))
