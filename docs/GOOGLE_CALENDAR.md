@@ -4,6 +4,7 @@
 
 - **Presets in the app:** Bookable times come from a weekly configuration (`PICKUP_WEEKLY_SLOT_DEFINITIONS`, loaded from `PICKUP_WEEKLY_SLOTS_JSON` or a built-in default). The organization calendar does **not** need placeholder events; availability is the preset grid minus any slot already taken in the app database.
 - **Google:** When a user books, the app calls **`events.insert`** on the first calendar in `GOOGLE_SLOT_SOURCE_CALENDAR_IDS` and stores `google_calendar_id`, `google_event_id`, the HTML link, and `pickup_starts_at` / `pickup_ends_at` on each selected `AIQuote`. Taken slots no longer appear in the picker (same time must not be assigned to an existing completed booking row).
+- The app writes the user email/name in event **description** and does not add Google attendees by default, to avoid service-account attendee 403 errors on consumer calendars.
 
 ## Environment variables
 
