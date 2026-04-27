@@ -4,6 +4,8 @@ from django.urls import include, path
 from core.views import (
     admin_accept_quote_view,
     admin_kanban_approve_view,
+    admin_kanban_assign_admin_view,
+    admin_kanban_pickup_label_view,
     admin_kanban_pickup_view,
     admin_kanban_reset_booking_view,
     admin_kanban_unapprove_view,
@@ -28,6 +30,8 @@ urlpatterns = [
     path('admin-quotes/accept/<int:quote_id>/', admin_accept_quote_view, name='admin_accept_quote'),
     path('admin-dashboard/', admin_kanban_view, name='admin_kanban'),
     path('admin-dashboard/approve/<int:quote_id>/', admin_kanban_approve_view, name='admin_kanban_approve'),
+    path('admin-dashboard/assign-admin/<int:quote_id>/', admin_kanban_assign_admin_view, name='admin_kanban_assign_admin'),
+    path('admin-dashboard/pickup-label/<int:quote_id>/', admin_kanban_pickup_label_view, name='admin_kanban_pickup_label'),
     path('admin-dashboard/pickup/<int:quote_id>/', admin_kanban_pickup_view, name='admin_kanban_pickup'),
     path('admin-dashboard/unapprove/<int:quote_id>/', admin_kanban_unapprove_view, name='admin_kanban_unapprove'),
     path('admin-dashboard/unpickup/<int:quote_id>/', admin_kanban_unpickup_view, name='admin_kanban_unpickup'),
