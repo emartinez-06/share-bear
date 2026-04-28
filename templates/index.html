@@ -136,7 +136,7 @@
                         <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
                             <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
                         </a>
-                        <form method="post" action="{% url 'logout' %}" class="hidden sm:inline">
+                        <form method="post" action="{% url 'logout' %}" class="inline">
                             {% csrf_token %}
                             <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">
                                 Log out
@@ -254,38 +254,6 @@
             </div>
         </footer>
 
-        <nav class="md:hidden fixed bottom-0 w-full bg-surface-container-lowest ambient-shadow px-3 py-2 grid grid-cols-4 gap-2 items-center z-50">
-            <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 text-primary">
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">storefront</span>
-                <span class="text-[10px] font-bold">Home</span>
-            </a>
-            <a href="{% url 'ai_quote' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">request_quote</span>
-                <span class="text-[10px] font-bold">AI Quote</span>
-            </a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'user_items' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span class="text-[10px] font-bold">My Items</span>
-            </a>
-            {% else %}
-            <a href="{% url 'login' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">login</span>
-                <span class="text-[10px] font-bold">Sign in</span>
-            </a>
-            {% endif %}
-            {% if user.is_authenticated %}
-            <a href="{% url 'profile' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">person</span>
-                <span class="text-[10px] font-bold">Account</span>
-            </a>
-            {% else %}
-            <a href="{% url 'login' %}" class="flex flex-col items-center gap-1 text-on-surface-variant">
-                <span class="material-symbols-outlined">person</span>
-                <span class="text-[10px] font-bold">Sign in</span>
-            </a>
-            {% endif %}
-        </nav>
     </div>
 
     <nav id="mobile-bottom-nav" class="fixed bottom-0 inset-x-0 z-50 md:hidden border-t border-outline-variant/20" style="background:rgba(249,249,248,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
