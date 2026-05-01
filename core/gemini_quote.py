@@ -37,6 +37,29 @@ def format_share_bear_offer_display(quote_text: str) -> str:
     return "—"
 
 
+def parse_offer_amount(offer_display: str) -> float | None:
+    s = (offer_display or '').strip().lstrip('$').replace(',', '')
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def format_offers_total(offer_displays: list[str]) -> str:
+    total = 0.0
+    found = False
+    for s in offer_displays:
+        v = parse_offer_amount(s)
+        if v is not None:
+            total += v
+            found = True
+    if not found:
+        return '—'
+    if total == int(total):
+        return f'${int(total):,}'
+    return f'${total:,.2f}'
+
+
 def build_quote_prompt(*, item_name: str, description: str, make: str, model: str, unknown_make_model: bool) -> str:
     if unknown_make_model:
         identity = (

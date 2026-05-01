@@ -74,6 +74,38 @@
                             </div>
                             <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="ug-chevron-{{ group.user.pk }}">expand_more</span>
                         </button>
+                        {# Take-over strip — required before approve or video-reminder email #}
+                        {% if group.assigned_admin %}
+                        <div class="px-4 py-2 border-t border-amber-100 bg-amber-50/40 flex items-center justify-between gap-2 flex-wrap">
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 font-body">
+                                <span class="material-symbols-outlined text-sm">person</span>{{ group.assigned_admin }}
+                            </span>
+                            <form method="post" action="{% url 'admin_kanban_take_over' user_id=group.user.pk %}" class="flex gap-1.5">
+                                {% csrf_token %}
+                                <input name="admin_name" type="text" placeholder="Reassign to…" maxlength="120"
+                                       class="rounded-md border border-outline-variant/40 bg-white px-2 py-1 text-xs text-on-surface font-body focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary w-28" />
+                                <button type="submit" class="text-xs font-semibold font-body text-on-surface-variant border border-outline-variant/50 px-2 py-1 rounded-md hover:bg-surface-container transition-colors">Update</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="px-4 py-2.5 border-t border-amber-200/60 bg-amber-50/70">
+                            <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1.5">Take over this case</p>
+                            <form method="post" action="{% url 'admin_kanban_take_over' user_id=group.user.pk %}" class="flex gap-1.5">
+                                {% csrf_token %}
+                                <input name="admin_name" type="text" required placeholder="Your name" maxlength="120"
+                                       class="flex-1 rounded-md border border-amber-300 bg-white px-2 py-1.5 text-xs text-on-surface font-body focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400" />
+                                <button type="submit" class="text-xs font-semibold font-body text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-md hover:bg-amber-200 transition-colors whitespace-nowrap">Take over</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                        {% if group.video_update_mailto_url %}
+                        <div class="px-4 py-2 border-t border-amber-100 bg-amber-50/50">
+                            <a href="{{ group.video_update_mailto_url }}" class="inline-flex items-center gap-1.5 text-xs font-semibold font-body text-amber-800 hover:text-amber-900 hover:underline">
+                                <span class="material-symbols-outlined text-sm">mail</span>
+                                Email video update request
+                            </a>
+                        </div>
+                        {% endif %}
                         {# Collapsible item list #}
                         <div id="ug-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
                             {% for q in group.items %}
@@ -116,22 +148,40 @@
                                 <p class="text-xs text-on-surface-variant font-body">@{{ group.user.username }}</p>
                                 <div class="mt-1.5 flex flex-wrap gap-1.5">
                                     <span class="text-[10px] font-semibold rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5">{{ group.item_count }} item{{ group.item_count|pluralize }}</span>
+                                    {% if group.total_display != '—' %}<span class="text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 tabular-nums">{{ group.total_display }}</span>{% endif %}
                                     {% for admin in group.admins %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">{{ admin }}</span>{% endfor %}
                                 </div>
                             </div>
                             <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="appr-chevron-{{ group.user.pk }}">expand_more</span>
                         </button>
+                        {% if group.approval_mailto_url %}
+                        <div class="px-4 py-2 border-t border-indigo-100 bg-indigo-50/50">
+                            <a href="{{ group.approval_mailto_url }}" class="inline-flex items-center gap-1.5 text-xs font-semibold font-body text-indigo-800 hover:text-indigo-900 hover:underline">
+                                <span class="material-symbols-outlined text-sm">outgoing_mail</span>
+                                Email approval + booking
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% if group.location_mailto_url %}
+                        <div class="px-4 py-2 border-t border-emerald-100 bg-emerald-50/50">
+                            <a href="{{ group.location_mailto_url }}" class="inline-flex items-center gap-1.5 text-xs font-semibold font-body text-emerald-800 hover:text-emerald-900 hover:underline">
+                                <span class="material-symbols-outlined text-sm">mark_email_read</span>
+                                Email for pickup location
+                            </a>
+                        </div>
+                        {% endif %}
                         <div id="appr-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
                             {% for q in group.items %}
                             <button type="button" onclick="openModal('modal-{{ q.pk }}')"
                                 class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
                                 <div class="flex items-start justify-between gap-2">
                                     <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
-                                    <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.quote_reviewed_at|date:"M j" }}</span>
+                                    <span class="flex-shrink-0 text-[10px] font-bold text-emerald-700 tabular-nums whitespace-nowrap">{{ q.offer_display }}</span>
                                 </div>
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     {% if q.google_event_id or q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5">Booked</span>{% endif %}
                                     {% if q.assigned_admin_name %}<span class="text-[10px] rounded-full bg-surface-container text-on-surface-variant px-1.5 py-0.5">{{ q.assigned_admin_name }}</span>{% endif %}
+                                    <span class="text-[10px] text-on-surface-variant font-body">{{ q.quote_reviewed_at|date:"M j" }}</span>
                                 </div>
                             </button>
                             {% endfor %}
@@ -298,9 +348,16 @@
             Awaiting video upload before approval
         </div>
         {% if q.video_reminder_mailto_url %}
+        {% if q.assigned_admin_name %}
         <a href="{{ q.video_reminder_mailto_url }}" class="w-full mb-4 inline-flex items-center justify-center gap-2 font-body font-semibold text-sm text-primary border border-primary/30 px-5 py-2.5 rounded-xl hover:bg-primary hover:text-on-primary transition-all">
             <span class="material-symbols-outlined text-base">mail</span> Email user to upload video
         </a>
+        {% else %}
+        <div class="w-full mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-xs text-amber-800 font-body flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">warning</span>
+            Take over this case first to enable email actions.
+        </div>
+        {% endif %}
         {% endif %}
         {% endif %}
         {# Deny form #}
@@ -420,13 +477,6 @@
             <span class="material-symbols-outlined text-base align-middle mr-1">mail</span>
             No account email on file for this user.
         </div>
-        {% endif %}
-        {% if q.pickup_location_mailto_url %}
-        <a href="{{ q.pickup_location_mailto_url }}"
-           class="mb-2 w-full inline-flex items-center justify-center gap-2 font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-all">
-            <span class="material-symbols-outlined text-base">mark_email_read</span>
-            Email for location
-        </a>
         {% endif %}
         <form method="post" action="{% url 'admin_kanban_assign_admin' quote_id=q.pk %}" class="mb-2 rounded-xl border border-outline-variant/40 bg-surface-container p-3">
             {% csrf_token %}

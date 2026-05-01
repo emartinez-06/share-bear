@@ -109,6 +109,16 @@
         </div>
         {% endif %}
 
+        {% if approved_running_total != '—' %}
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold text-emerald-800 font-body uppercase tracking-wide mb-0.5">Total approved value</p>
+                <p class="text-2xl font-display font-bold text-emerald-900 tabular-nums">{{ approved_running_total }}</p>
+            </div>
+            <span class="material-symbols-outlined text-emerald-600 text-3xl">payments</span>
+        </div>
+        {% endif %}
+
         <div class="space-y-4">
             {% for quote in quotes %}{% if not quote.denied %}
             <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
