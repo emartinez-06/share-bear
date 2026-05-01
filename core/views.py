@@ -4,7 +4,7 @@ from urllib.parse import quote, urlencode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect
+from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -123,12 +123,6 @@ def admin_quotes_view(request):
     quotes = list(
         AIQuote.objects.select_related('user').all().order_by('-created_at')[:200]
     )
-    for q in quotes:
-        q.signed_video_url = None
-        q.video_mime = 'video/mp4'
-        if q.has_video and q.video_path:
-            q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
-            q.video_mime = video_mime_type_from_path(q.video_path)
     return render(
         request,
         'admin_quotes.html',
@@ -342,11 +336,6 @@ def admin_kanban_view(request):
     for q in all_quotes:
         q.approval_mailto_url = None
         q.pickup_location_mailto_url = None
-        q.signed_video_url = None
-        q.video_mime = 'video/mp4'
-        if q.has_video and q.video_path:
-            q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
-            q.video_mime = video_mime_type_from_path(q.video_path)
         if q.picked_up:
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
@@ -455,6 +444,20 @@ def admin_kanban_unpickup_view(request, quote_id: int):
     q.save(update_fields=['picked_up', 'picked_up_at'])
     messages.success(request, f'Reverted "{q.item_name}" back to Approved.')
     return redirect('admin_kanban')
+
+
+@require_http_methods(['GET'])
+def admin_video_url_view(request, quote_id: int):
+    """Return a fresh signed video URL as JSON; called lazily by JS so page load stays fast."""
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.has_video or not q.video_path:
+        raise Http404('No video for this quote.')
+    url = create_signed_video_url(q.video_path, expires_in=600)
+    return JsonResponse({'url': url or '', 'mime': video_mime_type_from_path(q.video_path)})
 
 
 @login_required

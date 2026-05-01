@@ -18,6 +18,7 @@ class AIQuote(models.Model):
     quote_text = models.TextField()
     has_video = models.BooleanField(
         default=False,
+        db_index=True,
         help_text='True when the user uploaded an acceptance/condition video.',
     )
     video_path = models.CharField(
@@ -27,6 +28,7 @@ class AIQuote(models.Model):
     )
     quote_accepted_by_admin = models.BooleanField(
         default=False,
+        db_index=True,
         help_text='Set when an admin has reviewed the video and accepted the buy-back offer.',
     )
     quote_reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -65,6 +67,7 @@ class AIQuote(models.Model):
     )
     picked_up = models.BooleanField(
         default=False,
+        db_index=True,
         help_text='Set when an admin marks the item as physically picked up.',
     )
     picked_up_at = models.DateTimeField(null=True, blank=True)

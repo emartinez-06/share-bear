@@ -76,20 +76,17 @@
         </div>
     </section>
 
-    {% if pickup_calendar_configured and pickup_slots and pickup_eligible_quotes %}
+    {% if pickup_calendar_configured and pickup_eligible_quotes %}
     <section class="fade-up max-w-3xl mx-auto mt-10">
         <div class="bg-surface-container-lowest rounded-xl ambient-shadow border border-outline-variant/20 p-6 sm:p-8">
             <h2 class="font-display font-bold text-xl text-primary tracking-tightest mb-2">Schedule pickup</h2>
-            <p class="text-sm text-on-surface-variant font-body mb-6">Choose an available pickup time and which items this visit is for. One slot can cover multiple items.</p>
+            <p id="profile-pickup-status" class="text-sm text-on-surface-variant font-body mb-6">Loading available pickup times…</p>
             <form method="post" action="{% url 'profile_attach_pickup' %}" class="space-y-5">
                 {% csrf_token %}
                 <div>
                     <label for="slot_key" class="block text-sm font-semibold text-on-surface mb-2">Available times</label>
                     <select name="slot_key" id="slot_key" required class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body">
-                        <option value="">Select a time slot…</option>
-                        {% for s in pickup_slots %}
-                        <option value="{{ s.postKey }}">{% if s.start %}{% timezone pickup_display_timezone %}{{ s.summary }} — {{ s.start|date:"D M j, Y" }}, {{ s.start|date:"g:i A" }}{% if s.end %} – {{ s.end|date:"g:i A" }}{% endif %}{% endtimezone %}{% else %}{{ s.summary }}{% endif %}</option>
-                        {% endfor %}
+                        <option value="">Loading…</option>
                     </select>
                 </div>
                 <div>
@@ -114,23 +111,66 @@
             (function () {
                 var form = document.getElementById('pickup-submit-btn').closest('form');
                 var btn = document.getElementById('pickup-submit-btn');
+                var slotEl = document.getElementById('slot_key');
+                var statusEl = document.getElementById('profile-pickup-status');
+
                 function sync() {
                     var any = form.querySelectorAll('input[name="quote_ids"]:checked').length > 0;
-                    btn.disabled = !any;
+                    var hasSlot = slotEl && slotEl.value;
+                    btn.disabled = !(any && hasSlot);
                 }
                 form.addEventListener('change', sync);
                 sync();
+
+                function formatSlotLabel(s) {
+                    if (!s.start) return s.summary || 'Unknown time';
+                    var d = new Date(s.start);
+                    var de = s.end ? new Date(s.end) : null;
+                    var opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+                    var timeOpts = { hour: 'numeric', minute: '2-digit' };
+                    var datePart = d.toLocaleDateString(undefined, opts);
+                    var startTime = d.toLocaleTimeString(undefined, timeOpts);
+                    var endTime = de ? ' – ' + de.toLocaleTimeString(undefined, timeOpts) : '';
+                    return (s.summary || 'Pickup') + ' — ' + datePart + ', ' + startTime + endTime;
+                }
+
+                fetch('/accounts/pickup-slots/')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var slots = data.slots || [];
+                        if (!slotEl) return;
+                        slotEl.innerHTML = '';
+                        if (slots.length === 0) {
+                            var opt = document.createElement('option');
+                            opt.value = '';
+                            opt.textContent = 'No slots available right now';
+                            slotEl.appendChild(opt);
+                            if (statusEl) statusEl.textContent = 'No open pickup times are available right now. Check back later or contact SHARE Bear.';
+                        } else {
+                            var blank = document.createElement('option');
+                            blank.value = '';
+                            blank.textContent = 'Select a time slot…';
+                            slotEl.appendChild(blank);
+                            slots.forEach(function(s) {
+                                var opt = document.createElement('option');
+                                opt.value = s.postKey;
+                                opt.textContent = formatSlotLabel(s);
+                                slotEl.appendChild(opt);
+                            });
+                            if (statusEl) statusEl.textContent = 'Choose an available pickup time and which items this visit is for. One slot can cover multiple items.';
+                        }
+                        sync();
+                    })
+                    .catch(function() {
+                        if (statusEl) statusEl.textContent = 'Could not load pickup times. Please refresh the page.';
+                    });
             })();
             </script>
         </div>
     </section>
-    {% elif pickup_calendar_configured and pickup_slots and not pickup_eligible_quotes %}
+    {% elif pickup_calendar_configured and not pickup_eligible_quotes %}
     <section class="fade-up max-w-3xl mx-auto mt-10">
         <p class="text-sm text-on-surface-variant font-body bg-surface-container-lowest rounded-xl border border-outline-variant/20 px-5 py-4">You have no confirmed buy-backs waiting for a pickup (or they are already scheduled). Items must be confirmed by SHARE Bear before you can pick a time.</p>
-    </section>
-    {% elif pickup_calendar_configured and not pickup_slots %}
-    <section class="fade-up max-w-3xl mx-auto mt-10">
-        <p class="text-sm text-on-surface-variant font-body bg-surface-container-lowest rounded-xl border border-outline-variant/20 px-5 py-4">No open pickup times are available in the listing window. Check back later or contact SHARE Bear.</p>
     </section>
     {% endif %}
 

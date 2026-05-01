@@ -12,6 +12,7 @@ from core.views import (
     admin_kanban_unpickup_view,
     admin_kanban_view,
     admin_quotes_view,
+    admin_video_url_view,
     ai_quote_dev_success_view,
     ai_quote_success_detail_view,
     ai_quote_view,
@@ -36,5 +37,6 @@ urlpatterns = [
     path('admin-dashboard/unapprove/<int:quote_id>/', admin_kanban_unapprove_view, name='admin_kanban_unapprove'),
     path('admin-dashboard/unpickup/<int:quote_id>/', admin_kanban_unpickup_view, name='admin_kanban_unpickup'),
     path('admin-dashboard/reset-booking/<int:quote_id>/', admin_kanban_reset_booking_view, name='admin_kanban_reset_booking'),
+    path('admin-dashboard/video-url/<int:quote_id>/', admin_video_url_view, name='admin_video_url'),
     path('accounts/', include('users.urls')),
 ]

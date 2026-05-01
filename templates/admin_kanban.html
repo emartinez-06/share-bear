@@ -161,17 +161,23 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -181,7 +187,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -231,17 +237,23 @@
             </div>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -253,7 +265,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -327,17 +339,23 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -350,7 +368,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -413,6 +431,34 @@ document.addEventListener('keydown', function(e) {
         });
     }
 });
+function loadVideo(quoteId) {
+    var btn = document.getElementById('video-btn-' + quoteId);
+    var player = document.getElementById('video-player-' + quoteId);
+    var src = document.getElementById('video-src-' + quoteId);
+    var link = document.getElementById('video-link-' + quoteId);
+    var err = document.getElementById('video-error-' + quoteId);
+    if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+    fetch('/admin-dashboard/video-url/' + quoteId + '/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.url) {
+                window.open(data.url, '_blank', 'noopener,noreferrer');
+                if (src) { src.src = data.url; src.type = data.mime || 'video/mp4'; }
+                if (link) { link.href = data.url; }
+                if (player) player.classList.remove('hidden');
+                if (btn) { btn.textContent = 'Open Video'; btn.disabled = false; }
+                var video = document.getElementById('video-el-' + quoteId);
+                if (video) video.load();
+            } else {
+                if (err) { err.textContent = 'Could not load video URL.'; err.classList.remove('hidden'); }
+                if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+            }
+        })
+        .catch(function() {
+            if (err) { err.textContent = 'Failed to fetch video.'; err.classList.remove('hidden'); }
+            if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+        });
+}
 </script>
 
 {% if vercel_analytics_enabled %}

@@ -506,3 +506,149 @@ class GoogleCalendarBookingErrorMappingTests(TestCase):
                 item_names=['Item'],
             )
         self.assertIn('permission denied', str(cm.exception).lower())
+
+
+# ---------------------------------------------------------------------------
+# Performance optimization tests
+# ---------------------------------------------------------------------------
+
+class AdminVideoUrlViewTests(TestCase):
+    """Lazy video-URL endpoint used by JS to avoid N×Supabase calls on page load."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user(
+            username='staffvid', email='staff@test.example', password='pw', is_staff=True,
+        )
+        cls.regular = User.objects.create_user(
+            username='regularvid', email='user@test.example', password='pw',
+        )
+        cls.quote_with_video = AIQuote.objects.create(
+            user=cls.staff,
+            item_name='Laptop',
+            description='desc',
+            quote_text='$100',
+            has_video=True,
+            video_path='1/quote_1/current.mp4',
+        )
+        cls.quote_no_video = AIQuote.objects.create(
+            user=cls.staff,
+            item_name='Chair',
+            description='desc',
+            quote_text='$50',
+            has_video=False,
+        )
+
+    def test_returns_signed_url_json_for_staff(self):
+        self.client.login(username='staffvid', password='pw')
+        with patch('core.views.create_signed_video_url', return_value='https://supabase.example/signed') as mock_sign:
+            response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('url', data)
+        self.assertEqual(data['url'], 'https://supabase.example/signed')
+        self.assertIn('mime', data)
+        mock_sign.assert_called_once()
+
+    def test_requires_staff_login(self):
+        self.client.login(username='regularvid', password='pw')
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_requires_authentication(self):
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_quote_without_video_returns_404(self):
+        self.client.login(username='staffvid', password='pw')
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_no_video.pk}/')
+        self.assertEqual(response.status_code, 404)
+
+
+class PickupSlotsViewTests(TestCase):
+    """Lazy pickup-slots endpoint so user_items/profile page loads don't call Calendar API."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username='slotsuser', email='slots@test.example', password='pw',
+        )
+
+    def test_returns_slots_json_when_authenticated(self):
+        self.client.login(username='slotsuser', password='pw')
+        fake_slots = [{'key': 'slot_abc', 'display': 'Mon 9-10 AM'}]
+        with patch('users.views.list_candidate_slots', return_value=fake_slots):
+            with patch('users.views.is_pickup_calendar_configured', return_value=True):
+                response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('slots', data)
+        self.assertEqual(data['slots'], fake_slots)
+
+    def test_returns_empty_slots_when_calendar_not_configured(self):
+        self.client.login(username='slotsuser', password='pw')
+        with patch('users.views.is_pickup_calendar_configured', return_value=False):
+            response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['slots'], [])
+
+    def test_requires_authentication(self):
+        response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 302)
+
+
+class AdminKanbanPerformanceTests(TestCase):
+    """Kanban and admin-quotes page loads must NOT make any Supabase signed-URL calls."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user(
+            username='staffkanban', email='sk@test.example', password='pw', is_staff=True,
+        )
+        AIQuote.objects.create(
+            user=cls.staff, item_name='TV', description='d', quote_text='$80',
+            has_video=True, video_path='1/quote_99/current.mp4',
+        )
+
+    def test_kanban_page_load_does_not_call_supabase(self):
+        self.client.login(username='staffkanban', password='pw')
+        with patch('core.views.create_signed_video_url') as mock_sign:
+            response = self.client.get('/admin-dashboard/')
+        self.assertEqual(response.status_code, 200)
+        mock_sign.assert_not_called()
+
+    def test_admin_quotes_page_load_does_not_call_supabase(self):
+        self.client.login(username='staffkanban', password='pw')
+        with patch('core.views.create_signed_video_url') as mock_sign:
+            response = self.client.get('/admin-quotes/')
+        self.assertEqual(response.status_code, 200)
+        mock_sign.assert_not_called()
+
+
+class UserItemsPerformanceTests(TestCase):
+    """User items and profile page loads must NOT call the Google Calendar API."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username='itemsperf', email='ip@test.example', password='pw',
+        )
+
+    def test_user_items_does_not_call_calendar_api_on_load(self):
+        self.client.login(username='itemsperf', password='pw')
+        with patch('users.views.list_candidate_slots') as mock_slots:
+            response = self.client.get('/accounts/items/')
+        self.assertEqual(response.status_code, 200)
+        mock_slots.assert_not_called()
+
+    def test_profile_does_not_call_calendar_api_on_load(self):
+        self.client.login(username='itemsperf', password='pw')
+        with patch('users.views.list_candidate_slots') as mock_slots:
+            response = self.client.get('/accounts/profile/')
+        self.assertEqual(response.status_code, 200)
+        mock_slots.assert_not_called()

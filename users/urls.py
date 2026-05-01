@@ -11,4 +11,5 @@ urlpatterns = [
     path('profile/pickup/attach/', views.profile_attach_pickup_view, name='profile_attach_pickup'),
     path('items/', views.user_items_view, name='user_items'),
     path('items/booking-initiate/', booking_initiate_view, name='booking_initiate'),
+    path('pickup-slots/', views.pickup_slots_view, name='pickup_slots'),
 ]
