@@ -48,6 +48,7 @@ class DevSuccessPreviewTests(TestCase):
         self.assertContains(response, 'Dev preview')
         self.assertContains(response, 'UI preview')
         self.assertContains(response, 'Upload video to accept this offer')
+        self.assertContains(response, 'sharebearhelp@gmail.com')
 
 
 class NormalizeConfirmedOfferTests(TestCase):
@@ -1189,6 +1190,25 @@ class KanbanGroupEmailButtonsTests(TestCase):
         self.client.get('/admin-dashboard/')
         quote.refresh_from_db()
         self.assertEqual(quote.assigned_admin_name, 'Erick')
+
+    def test_approved_group_email_button_shows_even_with_denied_items(self):
+        User = get_user_model()
+        mixed_user = User.objects.create_user('grpmixed', 'gm@test.example', 'pw5')
+        AIQuote.objects.create(
+            user=mixed_user, item_name='Approved Mixed', description='d', quote_text='$60',
+            has_video=True, video_path='1/m/a.mp4', quote_accepted_by_admin=True, assigned_admin_name='Erick',
+        )
+        AIQuote.objects.create(
+            user=mixed_user, item_name='Denied Mixed', description='d', quote_text='$10',
+            denied=True,
+        )
+        self.client.login(username='grpbtnstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        groups = r.context['approved_by_user']
+        mixed_group = next((g for g in groups if g['user'].username == 'grpmixed'), None)
+        self.assertIsNotNone(mixed_group)
+        self.assertIsNotNone(mixed_group.get('approval_mailto_url'))
 
 
 class GroupEmailSubjectAdminTests(TestCase):

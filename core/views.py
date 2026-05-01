@@ -577,7 +577,6 @@ def admin_kanban_view(request):
         group['all_items_approved'] = (
             counts.get('approved', 0) > 0
             and counts.get('awaiting', 0) == 0
-            and counts.get('denied', 0) == 0
             and counts.get('picked_up', 0) == 0
         )
         group['approval_mailto_url'] = build_group_approval_mailto_url(
