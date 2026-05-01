@@ -113,6 +113,22 @@ class BuildApprovalMailtoUrlTests(TestCase):
         )
         self.assertIsNone(build_approval_mailto_url(quote))
 
+    def test_uses_legacy_placeholder_for_approved_items_without_assigned_admin(self):
+        user = get_user_model().objects.create_user(
+            'legacymail', 'legacymail@test.example', 'testpass123'
+        )
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='Legacy iPad',
+            description='legacy item',
+            quote_text='- SHARE Bear offer (USD): $75\n',
+            quote_accepted_by_admin=True,
+            assigned_admin_name='',
+        )
+        url = build_approval_mailto_url(quote)
+        self.assertIsNotNone(url)
+        self.assertIn('Erick', unquote(url or ''))
+
 
 class BuildPickupLocationMailtoUrlTests(TestCase):
     def test_mailto_contains_pickup_location_prompt(self):
@@ -152,6 +168,7 @@ class AdminKanbanApproveViewTests(TestCase):
             quote_text='- SHARE Bear offer (USD): $100\n',
             has_video=True,
             video_path='1/quote_99/x.mp4',
+            assigned_admin_name='TestAdmin',
         )
 
     def test_approve_non_staff_403(self):
@@ -779,6 +796,7 @@ class BuildVideoReminderMailtoUrlTests(TestCase):
             item_name='Blender',
             description='High-speed blender',
             quote_text='- SHARE Bear offer (USD): $30\n',
+            assigned_admin_name='Admin Sam',
         )
         url = build_video_reminder_mailto_url(quote)
         self.assertIsNotNone(url)
@@ -786,6 +804,20 @@ class BuildVideoReminderMailtoUrlTests(TestCase):
         self.assertIn('mailto:vr@test.example', decoded)
         self.assertIn('Blender', decoded)
         self.assertIn('upload', decoded.lower())
+
+    def test_returns_none_when_admin_not_assigned(self):
+        from core.views import build_video_reminder_mailto_url
+        user = get_user_model().objects.create_user(
+            'vidremind2', 'vr2@test.example', 'pw', first_name='Sam'
+        )
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='Blender',
+            description='High-speed blender',
+            quote_text='- SHARE Bear offer (USD): $30\n',
+            assigned_admin_name='',
+        )
+        self.assertIsNone(build_video_reminder_mailto_url(quote))
 
     def test_returns_none_when_no_email(self):
         from core.views import build_video_reminder_mailto_url
@@ -805,6 +837,21 @@ class BuildVideoReminderMailtoUrlTests(TestCase):
         self.client.login(username='vstafftest', password='pw')
         r = self.client.get('/admin-dashboard/')
         self.assertEqual(r.status_code, 200)
+        awaiting = r.context['awaiting']
+        fan = next((x for x in awaiting if x.pk == q.pk), None)
+        self.assertIsNotNone(fan)
+        self.assertIsNone(fan.video_reminder_mailto_url)
+
+    def test_video_reminder_url_attached_when_admin_is_assigned(self):
+        User = get_user_model()
+        User.objects.create_user('vstafftest3', 'vs3@test.example', 'pw', is_staff=True)
+        seller = User.objects.create_user('vseller3', 'vsel3@test.example', 'pw2')
+        q = AIQuote.objects.create(
+            user=seller, item_name='Fan', description='d', quote_text='$15', has_video=False,
+            assigned_admin_name='Case Owner',
+        )
+        self.client.login(username='vstafftest3', password='pw')
+        r = self.client.get('/admin-dashboard/')
         awaiting = r.context['awaiting']
         fan = next((x for x in awaiting if x.pk == q.pk), None)
         self.assertIsNotNone(fan)
@@ -860,3 +907,313 @@ class DeniedItemsUserFacingTests(TestCase):
         denied_ids = [q.pk for q in r.context['denied_quotes']]
         self.assertIn(self.denied_quote.pk, denied_ids)
         self.assertNotIn(self.normal_quote.pk, denied_ids)
+
+
+# ---------------------------------------------------------------------------
+# Approved price display & running totals feature
+# ---------------------------------------------------------------------------
+
+class ParseOfferAmountTests(TestCase):
+    def test_parses_whole_dollar(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertEqual(parse_offer_amount('$150'), 150.0)
+
+    def test_parses_comma_separated(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertEqual(parse_offer_amount('$1,200'), 1200.0)
+
+    def test_parses_cents(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertAlmostEqual(parse_offer_amount('$99.50'), 99.50)
+
+    def test_returns_none_for_dash(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertIsNone(parse_offer_amount('—'))
+
+    def test_returns_none_for_empty(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertIsNone(parse_offer_amount(''))
+
+    def test_returns_none_for_non_numeric(self):
+        from core.gemini_quote import parse_offer_amount
+        self.assertIsNone(parse_offer_amount('Call for pricing'))
+
+
+class FormatOffersTotalTests(TestCase):
+    def test_sums_multiple_amounts(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total(['$100', '$200', '$50']), '$350')
+
+    def test_returns_dash_when_none_parseable(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total(['—', '']), '—')
+
+    def test_skips_unparseable_entries(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total(['$100', '—', '$50']), '$150')
+
+    def test_formats_with_commas_for_large_totals(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total(['$1,000', '$500']), '$1,500')
+
+    def test_formats_cents_when_total_is_fractional(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total(['$99.50', '$1.25']), '$100.75')
+
+    def test_empty_list_returns_dash(self):
+        from core.gemini_quote import format_offers_total
+        self.assertEqual(format_offers_total([]), '—')
+
+
+class ApprovedKanbanGroupTotalTests(TestCase):
+    """Approved user cards on the kanban include a total_display field."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('totstaff', 'ts@test.example', 'pw', is_staff=True)
+        cls.seller = User.objects.create_user('totseller', 'tsel@test.example', 'pw2')
+        cls.q1 = AIQuote.objects.create(
+            user=cls.seller, item_name='Laptop', description='d',
+            quote_text='- SHARE Bear offer (USD): $200\n',
+            has_video=True, video_path='1/q/x.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$200',
+        )
+        cls.q2 = AIQuote.objects.create(
+            user=cls.seller, item_name='Phone', description='d',
+            quote_text='- SHARE Bear offer (USD): $100\n',
+            has_video=True, video_path='1/q/y.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$100',
+        )
+
+    def test_approved_group_has_total_display(self):
+        self.client.login(username='totstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        groups = r.context['approved_by_user']
+        seller_group = next(g for g in groups if g['user'].username == 'totseller')
+        self.assertIn('total_display', seller_group)
+
+    def test_approved_group_total_sums_items(self):
+        self.client.login(username='totstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        groups = r.context['approved_by_user']
+        seller_group = next(g for g in groups if g['user'].username == 'totseller')
+        self.assertEqual(seller_group['total_display'], '$300')
+
+    def test_kanban_approved_card_renders_total(self):
+        self.client.login(username='totstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertContains(r, '$300')
+
+    def test_kanban_approved_item_shows_price(self):
+        """Each item row in the Approved column shows offer_display."""
+        self.client.login(username='totstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        content = r.content.decode()
+        self.assertIn('$200', content)
+        self.assertIn('$100', content)
+
+
+class UserItemsApprovedTotalTests(TestCase):
+    """User items page shows a running total of approved items."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user('runtotal', 'rt@test.example', 'pw')
+        cls.q_approved1 = AIQuote.objects.create(
+            user=cls.user, item_name='Monitor', description='d',
+            quote_text='- SHARE Bear offer (USD): $80\n',
+            has_video=True, video_path='1/q/a.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$80',
+        )
+        cls.q_approved2 = AIQuote.objects.create(
+            user=cls.user, item_name='Keyboard', description='d',
+            quote_text='- SHARE Bear offer (USD): $40\n',
+            has_video=True, video_path='1/q/b.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$40',
+        )
+        cls.q_pending = AIQuote.objects.create(
+            user=cls.user, item_name='Pending Item', description='d',
+            quote_text='- SHARE Bear offer (USD): $50\n',
+        )
+
+    def test_user_items_context_has_approved_running_total(self):
+        self.client.login(username='runtotal', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('approved_running_total', r.context)
+
+    def test_user_items_approved_running_total_value(self):
+        self.client.login(username='runtotal', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertEqual(r.context['approved_running_total'], '$120')
+
+    def test_user_items_page_renders_approved_total(self):
+        self.client.login(username='runtotal', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertContains(r, '$120')
+
+    def test_user_items_total_excludes_pending_items(self):
+        self.client.login(username='runtotal', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertEqual(r.context['approved_running_total'], '$120')
+
+
+class BuildGroupLocationMailtoUrlTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user('grploc', 'grploc@test.example', 'pw', first_name='Sam')
+        self.user_no_email = User.objects.create_user('grplocnoe', '', 'pw')
+        self.booked_q = AIQuote.objects.create(
+            user=self.user, item_name='Guitar', description='d',
+            quote_text='$100', has_video=True, video_path='1/q/x',
+            quote_accepted_by_admin=True, booking_initiated=True,
+        )
+        self.booked_q2 = AIQuote.objects.create(
+            user=self.user, item_name='Amp', description='d',
+            quote_text='$80', has_video=True, video_path='1/q/y',
+            quote_accepted_by_admin=True, booking_initiated=True,
+        )
+
+    def test_returns_none_without_user_email(self):
+        from core.views import build_group_location_mailto_url
+        self.assertIsNone(build_group_location_mailto_url(self.user_no_email, [self.booked_q], admin_name='Erick'))
+
+    def test_returns_none_without_booked_items(self):
+        from core.views import build_group_location_mailto_url
+        self.assertIsNone(build_group_location_mailto_url(self.user, [], admin_name='Erick'))
+
+    def test_returns_none_without_assigned_admin(self):
+        from core.views import build_group_location_mailto_url
+        self.assertIsNone(build_group_location_mailto_url(self.user, [self.booked_q], admin_name=''))
+
+    def test_contains_admin_check_booking_time_placeholder(self):
+        from urllib.parse import unquote
+        from core.views import build_group_location_mailto_url
+        url = build_group_location_mailto_url(self.user, [self.booked_q], admin_name='Erick')
+        self.assertIn('ADMIN CHECK BOOKING TIME', unquote(url or ''))
+
+    def test_contains_pickup_fee_info(self):
+        from urllib.parse import unquote
+        from core.views import build_group_location_mailto_url
+        url = build_group_location_mailto_url(self.user, [self.booked_q], admin_name='Erick')
+        decoded = unquote(url or '')
+        self.assertIn('$15', decoded)
+        self.assertIn('Lot 25', decoded)
+
+    def test_lists_all_booked_item_names(self):
+        from urllib.parse import unquote
+        from core.views import build_group_location_mailto_url
+        url = build_group_location_mailto_url(self.user, [self.booked_q, self.booked_q2], admin_name='Erick')
+        decoded = unquote(url or '')
+        self.assertIn('Guitar', decoded)
+        self.assertIn('Amp', decoded)
+
+    def test_location_email_has_admin_in_subject(self):
+        from urllib.parse import unquote
+        from core.views import build_group_location_mailto_url
+        url = build_group_location_mailto_url(self.user, [self.booked_q], admin_name='Erick')
+        decoded = unquote(url or '')
+        self.assertIn('subject=Pickup location needed for your SHARE Bear item(s) — Erick', decoded)
+
+    def test_kanban_approved_card_shows_location_button_when_booked(self):
+        User = get_user_model()
+        staff = User.objects.create_user('grplocstaff', 'gs@test.example', 'pw', is_staff=True)
+        self.client.login(username='grplocstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertContains(r, 'Email for pickup location')
+
+    def test_kanban_approved_card_no_location_button_without_booking(self):
+        User = get_user_model()
+        staff = User.objects.create_user('grplocstaff2', 'gs2@test.example', 'pw', is_staff=True)
+        unbooked_user = User.objects.create_user('grplocunbooked', 'ub@test.example', 'pw2')
+        AIQuote.objects.create(
+            user=unbooked_user, item_name='Desk', description='d', quote_text='$50',
+            has_video=True, video_path='1/q/z', quote_accepted_by_admin=True,
+            booking_initiated=False,
+        )
+        self.client.login(username='grplocstaff2', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        # The unbooked user's card should not show the location button
+        groups = r.context['approved_by_user']
+        unbooked_group = next((g for g in groups if g['user'].username == 'grplocunbooked'), None)
+        self.assertIsNotNone(unbooked_group)
+        self.assertIsNone(unbooked_group.get('location_mailto_url'))
+
+
+class KanbanGroupEmailButtonsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('grpbtnstaff', 'gbs@test.example', 'pw', is_staff=True)
+        cls.approved_user = User.objects.create_user('grpapproved', 'ga@test.example', 'pw2')
+        cls.awaiting_only_user = User.objects.create_user('grpawait', 'gw@test.example', 'pw3')
+
+        AIQuote.objects.create(
+            user=cls.approved_user, item_name='Approved 1', description='d', quote_text='$100',
+            has_video=True, video_path='1/a/x.mp4', quote_accepted_by_admin=True, assigned_admin_name='Erick',
+        )
+        AIQuote.objects.create(
+            user=cls.approved_user, item_name='Approved 2', description='d', quote_text='$80',
+            has_video=True, video_path='1/a/y.mp4', quote_accepted_by_admin=True, assigned_admin_name='Erick',
+        )
+        AIQuote.objects.create(
+            user=cls.awaiting_only_user, item_name='Needs Video', description='d', quote_text='$30',
+            has_video=False, assigned_admin_name='Erick',
+        )
+
+    def test_approved_group_has_group_approval_email_button(self):
+        self.client.login(username='grpbtnstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertContains(r, 'Email approval + booking')
+
+    def test_awaiting_group_has_video_update_email_when_no_approved_items(self):
+        self.client.login(username='grpbtnstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertContains(r, 'Email video update request')
+
+    def test_backfills_legacy_approved_assigned_admin_to_erick(self):
+        User = get_user_model()
+        legacy_user = User.objects.create_user('legacyapproved', 'la@test.example', 'pw4')
+        quote = AIQuote.objects.create(
+            user=legacy_user, item_name='Legacy Approved', description='d', quote_text='$50',
+            has_video=True, video_path='1/l/z.mp4', quote_accepted_by_admin=True, assigned_admin_name='',
+        )
+        self.client.login(username='grpbtnstaff', password='pw')
+        self.client.get('/admin-dashboard/')
+        quote.refresh_from_db()
+        self.assertEqual(quote.assigned_admin_name, 'Erick')
+
+
+class GroupEmailSubjectAdminTests(TestCase):
+    def test_booking_email_has_admin_in_subject_not_signature(self):
+        from core.views import build_group_approval_mailto_url
+        User = get_user_model()
+        user = User.objects.create_user('booksubj', 'booksubj@test.example', 'pw')
+        q = AIQuote.objects.create(
+            user=user, item_name='Camera', description='d', quote_text='$100',
+            quote_accepted_by_admin=True, assigned_admin_name='Erick',
+        )
+        url = build_group_approval_mailto_url(user, [q], admin_name='Erick')
+        decoded = unquote(url or '')
+        self.assertIn('subject=Your SHARE Bear items are approved — complete booking — Erick', decoded)
+        self.assertNotIn('SHARE Bear Admin Team (Erick)', decoded)
+
+    def test_video_email_has_admin_in_subject_not_signature(self):
+        from core.views import build_group_video_reminder_mailto_url
+        User = get_user_model()
+        user = User.objects.create_user('vidsubj', 'vidsubj@test.example', 'pw')
+        q = AIQuote.objects.create(
+            user=user, item_name='Speaker', description='d', quote_text='$40',
+            has_video=False, assigned_admin_name='Erick',
+        )
+        url = build_group_video_reminder_mailto_url(user, [q], admin_name='Erick')
+        decoded = unquote(url or '')
+        self.assertIn('subject=Action needed: upload video(s) for your SHARE Bear items — Erick', decoded)
+        self.assertNotIn('SHARE Bear Admin Team (Erick)', decoded)

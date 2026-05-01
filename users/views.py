@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
+from core.gemini_quote import format_offers_total
 from core.google_calendar import (
     create_pickup_event,
     is_pickup_calendar_configured,
@@ -239,6 +240,8 @@ def user_items_view(request):
         and not (q.google_event_id or '').strip()
     ]
     denied_quotes = [q for q in quotes if q.denied]
+    approved_quotes = [q for q in quotes if q.quote_accepted_by_admin and not q.denied]
+    approved_running_total = format_offers_total([q.offer_display for q in approved_quotes])
     return render(
         request,
         'user_items.html',
@@ -246,6 +249,7 @@ def user_items_view(request):
             'quotes': quotes,
             'denied_quotes': denied_quotes,
             'approved_pickup_quotes': approved_pickup_quotes,
+            'approved_running_total': approved_running_total,
             'pickup_slots': [],
             'pickup_calendar_configured': is_pickup_calendar_configured(),
             'pickup_display_timezone': (getattr(settings, 'GOOGLE_PICKUP_TIMEZONE', 'America/Chicago') or 'America/Chicago'),

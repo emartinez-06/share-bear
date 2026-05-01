@@ -3,6 +3,7 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, QuoteVideoForm
-from .gemini_quote import build_quote_prompt, format_share_bear_offer_display, get_quote_from_gemini
+from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini
 from .models import AIQuote
 from .supabase_storage import create_signed_video_url, is_storage_configured, upload_quote_video
 from .video_utils import file_extension_for_upload, video_mime_type_from_path
@@ -21,6 +22,20 @@ logger = logging.getLogger(__name__)
 # Shown on /ai-quote/dev-success/ when DEBUG is True (no Gemini call).
 DEV_MOCK_QUOTE_ITEM_NAME = 'Sample item (dev preview)'
 DEV_MOCK_OFFER_DISPLAY = '$127'
+LEGACY_ASSIGNED_ADMIN_PLACEHOLDER = 'Erick'
+
+
+def _normalized_admin_name(raw_name: str) -> str:
+    return (raw_name or '').strip()
+
+
+def _effective_assigned_admin_name(quote_obj: AIQuote) -> str:
+    assigned = _normalized_admin_name(quote_obj.assigned_admin_name)
+    if assigned:
+        return assigned
+    if quote_obj.quote_accepted_by_admin:
+        return LEGACY_ASSIGNED_ADMIN_PLACEHOLDER
+    return ''
 
 
 def build_approval_mailto_url(quote_obj: AIQuote) -> str | None:
@@ -28,7 +43,12 @@ def build_approval_mailto_url(quote_obj: AIQuote) -> str | None:
     if not recipient:
         return None
 
+    admin_name = _effective_assigned_admin_name(quote_obj)
+    if not admin_name:
+        return None
     subject = f'Your SHARE Bear item has been approved: {quote_obj.item_name}'
+    if admin_name:
+        subject += f' — {admin_name}'
     body_lines = [
         f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
         '',
@@ -54,11 +74,17 @@ def build_video_reminder_mailto_url(quote_obj: AIQuote) -> str | None:
     if not recipient:
         return None
 
+    admin_name = _normalized_admin_name(quote_obj.assigned_admin_name)
+    if not admin_name:
+        return None
     subject = f'Action needed: upload a video for your SHARE Bear item — {quote_obj.item_name}'
+    if admin_name:
+        subject += f' | {admin_name}'
     body_lines = [
         f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
         '',
-        f'Your item "{quote_obj.item_name}" is awaiting review, but we still need a short video',
+        f'Your item "{
+            quote_obj.item_name}" is awaiting review, but we still need a short video',
         "showing the item's current condition before we can process your buy-back offer.",
         '',
         'Please log in to your SHARE Bear account and upload a video from your item page:',
@@ -75,6 +101,42 @@ def build_video_reminder_mailto_url(quote_obj: AIQuote) -> str | None:
     return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
 
 
+def build_group_location_mailto_url(user, booked_items: list, admin_name: str = '') -> str | None:
+    """Single location-request email covering all booked items for a user's approved group."""
+    recipient = (user.email or '').strip()
+    if not recipient or not booked_items:
+        return None
+
+    admin_name = admin_name.strip()
+    if not admin_name:
+        return None
+    subject = 'Pickup location needed for your SHARE Bear item(s)'
+    if admin_name:
+        subject += f' — {admin_name}'
+    item_lines = '\n'.join(f'- {q.item_name}' for q in booked_items)
+    body_lines = [
+        f'Hi {user.first_name or user.username},',
+        '',
+        'Confirmed! You have a pickup scheduled for these item(s):',
+        item_lines,
+        '',
+        'Time: [ADMIN CHECK BOOKING TIME]',
+        '',
+        'Please reply to this email with where you would like to meet:',
+        '- Residential Hall',
+        '- Draper Parking Lot (Lot 25) next to Traditions Plaza',
+        '- Off-campus apartment (include apartment number & Address)',
+        '',
+        'Note: A $15 pickup fee applies if we come to you.',
+        'No fee if you drop off at the parking lot next to Traditions Plaza / Draper BU Lot 25.',
+        '',
+        'Thanks,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
 def build_pickup_location_mailto_url(quote_obj: AIQuote) -> str | None:
     recipient = (quote_obj.user.email or '').strip()
     if not recipient:
@@ -82,16 +144,23 @@ def build_pickup_location_mailto_url(quote_obj: AIQuote) -> str | None:
     if not ((quote_obj.google_event_id or '').strip() or quote_obj.booking_initiated):
         return None
 
+    admin_name = _effective_assigned_admin_name(quote_obj)
+    if not admin_name:
+        return None
+
     pickup_time = 'your scheduled pickup slot'
     if quote_obj.pickup_starts_at:
         start_local = timezone.localtime(quote_obj.pickup_starts_at)
         if quote_obj.pickup_ends_at:
             end_local = timezone.localtime(quote_obj.pickup_ends_at)
-            pickup_time = f'{start_local:%A, %b %-d at %-I:%M %p} to {end_local:%-I:%M %p}'
+            pickup_time = f'{
+                start_local:%A, %b %-d at %-I:%M %p} to {end_local:%-I:%M %p}'
         else:
             pickup_time = f'{start_local:%A, %b %-d at %-I:%M %p}'
 
     subject = f'Pickup location confirmation needed: {quote_obj.item_name}'
+    if admin_name:
+        subject += f' — {admin_name}'
     body_lines = [
         f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
         '',
@@ -105,6 +174,61 @@ def build_pickup_location_mailto_url(quote_obj: AIQuote) -> str | None:
         '- Martin',
         '- Collins',
         '- Off-campus apartment (include apartment number)',
+        '',
+        'Thanks,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
+def build_group_approval_mailto_url(user, approved_items: list, admin_name: str = '') -> str | None:
+    recipient = (user.email or '').strip()
+    admin_name = admin_name.strip()
+    if not recipient or not approved_items or not admin_name:
+        return None
+
+    subject = f'Your SHARE Bear items are approved — complete booking — {admin_name}'
+    item_lines = '\n'.join(f'- {q.item_name}: {q.offer_display}' for q in approved_items)
+    body_lines = [
+        f'Hi {user.first_name or user.username},',
+        '',
+        'Great news — all your submitted SHARE Bear items are approved:',
+        item_lines,
+        '',
+        'Please fill out the booking link under your account profile to schedule pickup.',
+        '',
+        'If anything looks off, reply directly to this email.',
+        '',
+        'Best,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
+def build_group_video_reminder_mailto_url(user, awaiting_items: list, admin_name: str = '') -> str | None:
+    recipient = (user.email or '').strip()
+    admin_name = admin_name.strip()
+    if not recipient or not awaiting_items or not admin_name:
+        return None
+
+    missing_video = [q for q in awaiting_items if not q.has_video]
+    if not missing_video:
+        return None
+
+    subject = f'Action needed: upload video(s) for your SHARE Bear items — {admin_name}'
+    item_lines = '\n'.join(f'- {q.item_name}' for q in missing_video)
+    body_lines = [
+        f'Hi {user.first_name or user.username},',
+        '',
+        'Before we can review your items, we still need short videos for:',
+        item_lines,
+        '',
+        'Please log in to your SHARE Bear account and upload videos from your item page:',
+        '  https://sharebear.app',
+        '',
+        'If you have questions, reply to this email.',
         '',
         'Thanks,',
         'SHARE Bear Admin Team',
@@ -148,7 +272,8 @@ def admin_quotes_view(request):
         return HttpResponseForbidden('You do not have access to this page.')
 
     quotes = list(
-        AIQuote.objects.select_related('user').all().order_by('-created_at')[:200]
+        AIQuote.objects.select_related(
+            'user').all().order_by('-created_at')[:200]
     )
     return render(
         request,
@@ -180,7 +305,8 @@ def admin_accept_quote_view(request, quote_id: int):
 
     form = AdminAcceptQuoteForm(request.POST)
     if not form.is_valid():
-        e = list(form.errors.values())[0][0] if form.errors else 'Invalid input.'
+        e = list(form.errors.values())[
+            0][0] if form.errors else 'Invalid input.'
         messages.error(request, e)
         return redirect('admin_quotes')
 
@@ -194,7 +320,8 @@ def admin_accept_quote_view(request, quote_id: int):
     quote.save(update_fields=update_fields)
     messages.success(
         request,
-        f'You accepted the buy-back offer for @{quote.user.username} — {quote.item_name}.',
+        f'You accepted the buy-back offer for @{
+            quote.user.username} — {quote.item_name}.',
     )
     return redirect('admin_quotes')
 
@@ -241,7 +368,8 @@ def ai_quote_view(request):
                     unknown_make_model=bool(data.get('unknown_make_model')),
                     quote_text=quote_text,
                 )
-                success_url = reverse('ai_quote_success_detail', kwargs={'quote_id': q.pk})
+                success_url = reverse(
+                    'ai_quote_success_detail', kwargs={'quote_id': q.pk})
                 return HttpResponseRedirect(f'{success_url}?celebrate=1')
             return render(
                 request,
@@ -308,7 +436,8 @@ def ai_quote_success_detail_view(request, quote_id: int):
 def quote_video_upload_view(request, quote_id: int):
     quote = get_object_or_404(AIQuote, pk=quote_id, user=request.user)
     if quote.quote_accepted_by_admin:
-        messages.info(request, 'This offer is already confirmed by SHARE Bear.')
+        messages.info(
+            request, 'This offer is already confirmed by SHARE Bear.')
         return redirect('ai_quote_success_detail', quote_id=quote.pk)
 
     form = QuoteVideoForm(
@@ -317,7 +446,8 @@ def quote_video_upload_view(request, quote_id: int):
         max_bytes=settings.QUOTE_VIDEO_MAX_BYTES,
     )
     if not form.is_valid():
-        err = form.errors.get('video') or form.errors.get('__all__', ['Invalid upload.'])
+        err = form.errors.get('video') or form.errors.get(
+            '__all__', ['Invalid upload.'])
         messages.error(request, err[0] if err else 'Invalid upload.')
         return redirect('ai_quote_success_detail', quote_id=quote.pk)
 
@@ -339,7 +469,8 @@ def quote_video_upload_view(request, quote_id: int):
             content_type=video.content_type or 'application/octet-stream',
         )
     except RuntimeError as e:
-        messages.error(request, str(e) or 'Upload failed. Try a smaller file or a different format.')
+        messages.error(request, str(
+            e) or 'Upload failed. Try a smaller file or a different format.')
         return redirect('ai_quote_success_detail', quote_id=quote.pk)
 
     quote.has_video = True
@@ -358,7 +489,35 @@ def admin_kanban_view(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden('You do not have access to this page.')
 
-    all_quotes = list(AIQuote.objects.select_related('user').order_by('-created_at'))
+    all_quotes = list(AIQuote.objects.select_related(
+        'user').order_by('-created_at'))
+    legacy_approved_missing_admin_ids = [
+        q.pk for q in all_quotes
+        if q.quote_accepted_by_admin and not _normalized_admin_name(q.assigned_admin_name)
+    ]
+    if legacy_approved_missing_admin_ids:
+        AIQuote.objects.filter(pk__in=legacy_approved_missing_admin_ids).update(
+            assigned_admin_name=LEGACY_ASSIGNED_ADMIN_PLACEHOLDER
+        )
+        legacy_ids = set(legacy_approved_missing_admin_ids)
+        for q in all_quotes:
+            if q.pk in legacy_ids:
+                q.assigned_admin_name = LEGACY_ASSIGNED_ADMIN_PLACEHOLDER
+
+    user_stage_counts: dict[int, dict[str, int]] = {}
+    for q in all_quotes:
+        counts = user_stage_counts.setdefault(
+            q.user_id, {'awaiting': 0, 'approved': 0, 'picked_up': 0, 'denied': 0}
+        )
+        if q.picked_up:
+            counts['picked_up'] += 1
+        elif q.quote_accepted_by_admin:
+            counts['approved'] += 1
+        elif q.denied:
+            counts['denied'] += 1
+        else:
+            counts['awaiting'] += 1
+
     awaiting, approved, picked_up_list, denied_list = [], [], [], []
     for q in all_quotes:
         q.approval_mailto_url = None
@@ -374,7 +533,8 @@ def admin_kanban_view(request):
             denied_list.append(q)
         else:
             if not q.has_video:
-                q.video_reminder_mailto_url = build_video_reminder_mailto_url(q)
+                q.video_reminder_mailto_url = build_video_reminder_mailto_url(
+                    q)
             awaiting.append(q)
 
     def _group_by_user(items: list) -> list[dict]:
@@ -382,21 +542,62 @@ def admin_kanban_view(request):
         for q in items:
             uid = q.user_id
             if uid not in groups:
-                groups[uid] = {'user': q.user, 'items': [], 'item_count': 0, 'admins': set()}
+                groups[uid] = {'user': q.user, 'items': [],
+                               'item_count': 0, 'admins': set()}
             groups[uid]['items'].append(q)
             groups[uid]['item_count'] += 1
             if q.assigned_admin_name:
                 groups[uid]['admins'].add(q.assigned_admin_name)
-        return [{**g, 'admins': sorted(g['admins'])} for g in groups.values()]
+        result = []
+        for g in groups.values():
+            admins_sorted = sorted(g['admins'])
+            total = format_offers_total([q.offer_display for q in g['items']])
+            assigned_admin = admins_sorted[0] if admins_sorted else ''
+            result.append({
+                **g,
+                'admins': admins_sorted,
+                'total_display': total,
+                'assigned_admin': assigned_admin,
+            })
+        return result
+
+    awaiting_by_user = _group_by_user(awaiting)
+    for group in awaiting_by_user:
+        counts = user_stage_counts.get(group['user'].pk, {})
+        no_approved_items = counts.get('approved', 0) == 0
+        group['video_update_mailto_url'] = build_group_video_reminder_mailto_url(
+            group['user'],
+            group['items'],
+            admin_name=group['assigned_admin'],
+        ) if no_approved_items else None
+
+    approved_by_user = _group_by_user(approved)
+    for group in approved_by_user:
+        counts = user_stage_counts.get(group['user'].pk, {})
+        group['all_items_approved'] = (
+            counts.get('approved', 0) > 0
+            and counts.get('awaiting', 0) == 0
+            and counts.get('denied', 0) == 0
+            and counts.get('picked_up', 0) == 0
+        )
+        group['approval_mailto_url'] = build_group_approval_mailto_url(
+            group['user'],
+            group['items'],
+            admin_name=group['assigned_admin'],
+        ) if group['all_items_approved'] else None
+        booked = [q for q in group['items'] if q.booking_initiated or (q.google_event_id or '').strip()]
+        group['location_mailto_url'] = build_group_location_mailto_url(
+            group['user'], booked, admin_name=group['assigned_admin']
+        )
 
     return render(
         request,
         'admin_kanban.html',
         {
             'awaiting': awaiting,
-            'awaiting_by_user': _group_by_user(awaiting),
+            'awaiting_by_user': awaiting_by_user,
             'approved': approved,
-            'approved_by_user': _group_by_user(approved),
+            'approved_by_user': approved_by_user,
             'picked_up': picked_up_list,
             'picked_up_by_user': _group_by_user(picked_up_list),
             'denied': denied_list,
@@ -416,15 +617,20 @@ def admin_kanban_approve_view(request, quote_id: int):
     if not q.has_video:
         messages.error(
             request,
-            f'Cannot approve "{q.item_name}" — the user has not uploaded a video yet.',
+            f'Cannot approve "{
+                q.item_name}" — the user has not uploaded a video yet.',
         )
         return redirect('admin_kanban')
     if q.quote_accepted_by_admin:
         messages.info(request, f'"{q.item_name}" is already approved.')
         return redirect('admin_kanban')
+    if not (q.assigned_admin_name or '').strip():
+        messages.error(request, f'Take over this case first — no admin is assigned to "{q.item_name}".')
+        return redirect('admin_kanban')
     form = AdminAcceptQuoteForm(request.POST)
     if not form.is_valid():
-        e = list(form.errors.values())[0][0] if form.errors else 'Invalid input.'
+        e = list(form.errors.values())[
+            0][0] if form.errors else 'Invalid input.'
         messages.error(request, e)
         return redirect('admin_kanban')
     final = form.cleaned_data['final_offer']
@@ -435,7 +641,8 @@ def admin_kanban_approve_view(request, quote_id: int):
         q.admin_confirmed_offer_display = final
         update_fields.append('admin_confirmed_offer_display')
     q.save(update_fields=update_fields)
-    messages.success(request, f'Approved "{q.item_name}" for @{q.user.username}.')
+    messages.success(request, f'Approved "{
+                     q.item_name}" for @{q.user.username}.')
     return redirect('admin_kanban')
 
 
@@ -447,15 +654,18 @@ def admin_kanban_pickup_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if not q.quote_accepted_by_admin:
-        messages.error(request, f'"{q.item_name}" must be approved before it can be marked as picked up.')
+        messages.error(request, f'"{
+                       q.item_name}" must be approved before it can be marked as picked up.')
         return redirect('admin_kanban')
     if q.picked_up:
-        messages.info(request, f'"{q.item_name}" is already marked as picked up.')
+        messages.info(
+            request, f'"{q.item_name}" is already marked as picked up.')
         return redirect('admin_kanban')
     q.picked_up = True
     q.picked_up_at = timezone.now()
     q.save(update_fields=['picked_up', 'picked_up_at'])
-    messages.success(request, f'"{q.item_name}" for @{q.user.username} marked as picked up.')
+    messages.success(
+        request, f'"{q.item_name}" for @{q.user.username} marked as picked up.')
     return redirect('admin_kanban')
 
 
@@ -470,7 +680,8 @@ def admin_kanban_unapprove_view(request, quote_id: int):
         messages.info(request, f'"{q.item_name}" has not been approved yet.')
         return redirect('admin_kanban')
     if q.picked_up:
-        messages.error(request, f'Revert "{q.item_name}" from Picked Up to Approved first.')
+        messages.error(request, f'Revert "{
+                       q.item_name}" from Picked Up to Approved first.')
         return redirect('admin_kanban')
     q.quote_accepted_by_admin = False
     q.quote_reviewed_at = None
@@ -523,23 +734,28 @@ def booking_initiate_view(request):
     quote_ids = sorted(set(quote_ids))
 
     if not quote_ids:
-        messages.error(request, 'Select at least one item before opening Google Booking.')
+        messages.error(
+            request, 'Select at least one item before opening Google Booking.')
         return redirect('user_items')
 
     qs = list(AIQuote.objects.filter(pk__in=quote_ids, user=request.user))
     if len(qs) != len(quote_ids):
-        messages.error(request, 'One or more selected items could not be found.')
+        messages.error(
+            request, 'One or more selected items could not be found.')
         return redirect('user_items')
 
     for q in qs:
         if not (q.quote_accepted_by_admin and not q.picked_up):
-            messages.error(request, f'"{q.item_name}" is not eligible for booking.')
+            messages.error(
+                request, f'"{q.item_name}" is not eligible for booking.')
             return redirect('user_items')
         if q.booking_initiated or (q.google_event_id or '').strip():
-            messages.error(request, f'"{q.item_name}" already has a booking in progress.')
+            messages.error(
+                request, f'"{q.item_name}" already has a booking in progress.')
             return redirect('user_items')
 
-    AIQuote.objects.filter(pk__in=quote_ids, user=request.user).update(booking_initiated=True)
+    AIQuote.objects.filter(pk__in=quote_ids, user=request.user).update(
+        booking_initiated=True)
 
     u = request.user
     name = (u.get_full_name() or u.username).strip()
@@ -549,10 +765,12 @@ def booking_initiate_view(request):
     base_url = (getattr(settings, 'GOOGLE_BOOKING_URL', '') or '').strip()
     if base_url:
         separator = '&' if '?' in base_url else '?'
-        params = urlencode({'name': name, 'email': email, 'details': item_summary})
+        params = urlencode(
+            {'name': name, 'email': email, 'details': item_summary})
         booking_url = f'{base_url}{separator}{params}'
     else:
-        messages.error(request, 'Booking URL is not configured. Contact SHARE Bear.')
+        messages.error(
+            request, 'Booking URL is not configured. Contact SHARE Bear.')
         return redirect('user_items')
 
     return HttpResponseRedirect(booking_url)
@@ -566,11 +784,13 @@ def admin_kanban_reset_booking_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if not q.booking_initiated:
-        messages.info(request, f'"{q.item_name}" does not have a pending booking to reset.')
+        messages.info(
+            request, f'"{q.item_name}" does not have a pending booking to reset.')
         return redirect('admin_kanban')
     q.booking_initiated = False
     q.save(update_fields=['booking_initiated'])
-    messages.success(request, f'Booking reset for "{q.item_name}" — item is bookable again.')
+    messages.success(request, f'Booking reset for "{
+                     q.item_name}" — item is bookable again.')
     return redirect('admin_kanban')
 
 
@@ -582,15 +802,18 @@ def admin_kanban_assign_admin_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if not q.quote_accepted_by_admin or q.picked_up:
-        messages.error(request, f'"{q.item_name}" must be in Approved to set an assigned admin.')
+        messages.error(
+            request, f'"{q.item_name}" must be in Approved to set an assigned admin.')
         return redirect('admin_kanban')
     assigned = (request.POST.get('assigned_admin_name') or '').strip()[:120]
     q.assigned_admin_name = assigned
     q.save(update_fields=['assigned_admin_name'])
     if assigned:
-        messages.success(request, f'Assigned admin for "{q.item_name}" set to {assigned}.')
+        messages.success(request, f'Assigned admin for "{
+                         q.item_name}" set to {assigned}.')
     else:
-        messages.success(request, f'Assigned admin cleared for "{q.item_name}".')
+        messages.success(
+            request, f'Assigned admin cleared for "{q.item_name}".')
     return redirect('admin_kanban')
 
 
@@ -602,10 +825,12 @@ def admin_kanban_pickup_label_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if not q.picked_up:
-        messages.error(request, f'"{q.item_name}" must be in Picked Up to set color/number.')
+        messages.error(
+            request, f'"{q.item_name}" must be in Picked Up to set color/number.')
         return redirect('admin_kanban')
 
-    allowed_colors = {'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'black', 'white'}
+    allowed_colors = {'red', 'blue', 'green',
+                      'yellow', 'purple', 'orange', 'black', 'white'}
     color = (request.POST.get('pickup_label_color') or '').strip().lower()
     if color and color not in allowed_colors:
         messages.error(request, 'Choose a valid color.')
@@ -638,13 +863,15 @@ def admin_kanban_deny_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
     if q.quote_accepted_by_admin or q.picked_up:
-        messages.error(request, f'Cannot deny "{q.item_name}" — it is already approved or picked up.')
+        messages.error(request, f'Cannot deny "{
+                       q.item_name}" — it is already approved or picked up.')
         return redirect('admin_kanban')
     reason = (request.POST.get('denial_reason') or '').strip()
     q.denied = True
     q.denial_reason = reason
     q.save(update_fields=['denied', 'denial_reason'])
-    messages.success(request, f'Denied "{q.item_name}" for @{q.user.username}.')
+    messages.success(request, f'Denied "{
+                     q.item_name}" for @{q.user.username}.')
     return redirect('admin_kanban')
 
 
@@ -662,4 +889,25 @@ def admin_kanban_undeny_view(request, quote_id: int):
     q.denial_reason = ''
     q.save(update_fields=['denied', 'denial_reason'])
     messages.success(request, f'Denial reversed for "{q.item_name}" — moved back to Awaiting.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_take_over_view(request, user_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    User = get_user_model()
+    target_user = get_object_or_404(User, pk=user_id)
+    admin_name = (request.POST.get('admin_name') or '').strip()[:120]
+    if not admin_name:
+        messages.error(request, 'Enter an admin name to take over this case.')
+        return redirect('admin_kanban')
+    updated = AIQuote.objects.filter(
+        user=target_user,
+        denied=False,
+        picked_up=False,
+    ).update(assigned_admin_name=admin_name)
+    messages.success(request, f'@{target_user.username} case taken over by {admin_name} ({updated} item(s) updated).')
     return redirect('admin_kanban')
