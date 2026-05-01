@@ -74,20 +74,21 @@
                                 </td>
                                 <td class="px-5 py-4 text-sm text-on-surface font-semibold tabular-nums whitespace-nowrap">{{ quote.offer_display }}</td>
                                 <td class="px-5 py-4 text-sm text-on-surface max-w-sm">
-                                    {% if quote.has_video and quote.signed_video_url %}
-                                    <details class="max-w-[min(100%,22rem)]">
-                                        <summary class="cursor-pointer font-medium text-primary hover:underline inline-flex items-center gap-1 list-none [&::-webkit-details-marker]:hidden">
-                                            <span class="material-symbols-outlined text-base">play_circle</span> Watch
-                                        </summary>
-                                        <div class="mt-2 rounded-lg overflow-hidden bg-black/90 aspect-video w-full max-h-48">
-                                            <video class="w-full h-full object-contain" controls playsinline preload="metadata">
-                                                <source src="{{ quote.signed_video_url }}" type="{{ quote.video_mime }}">
-                                            </video>
+                                    {% if quote.has_video %}
+                                    <div id="video-wrap-{{ quote.pk }}">
+                                        <button id="video-btn-{{ quote.pk }}" onclick="loadVideo({{ quote.pk }})" class="text-sm font-semibold font-body text-primary px-3 py-1.5 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-1.5">
+                                            <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+                                        </button>
+                                        <div id="video-player-{{ quote.pk }}" class="hidden mt-2">
+                                            <div class="rounded-lg overflow-hidden bg-black/90 aspect-video w-full max-h-48">
+                                                <video id="video-el-{{ quote.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                                                    <source id="video-src-{{ quote.pk }}" src="" type="video/mp4">
+                                                </video>
+                                            </div>
+                                            <a id="video-link-{{ quote.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="text-xs text-primary font-medium hover:underline mt-1.5 inline-block">Open in new tab</a>
                                         </div>
-                                        <a href="{{ quote.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="text-xs text-primary font-medium hover:underline mt-1.5 inline-block">Open in new tab</a>
-                                    </details>
-                                    {% elif quote.has_video %}
-                                    <span class="text-on-surface-variant text-xs" title="signing URL may be misconfigured">Video on file (URL unavailable)</span>
+                                        <p id="video-error-{{ quote.pk }}" class="hidden text-xs text-red-600 font-body mt-1"></p>
+                                    </div>
                                     {% else %}
                                     <span class="text-on-surface-variant">—</span>
                                     {% endif %}
@@ -126,6 +127,37 @@
         </section>
     </main>
 </div>
+
+<script>
+function loadVideo(quoteId) {
+    var btn = document.getElementById('video-btn-' + quoteId);
+    var player = document.getElementById('video-player-' + quoteId);
+    var src = document.getElementById('video-src-' + quoteId);
+    var link = document.getElementById('video-link-' + quoteId);
+    var err = document.getElementById('video-error-' + quoteId);
+    if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+    fetch('/admin-dashboard/video-url/' + quoteId + '/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.url) {
+                src.src = data.url;
+                src.type = data.mime || 'video/mp4';
+                link.href = data.url;
+                if (player) player.classList.remove('hidden');
+                if (btn) btn.classList.add('hidden');
+                var video = document.getElementById('video-el-' + quoteId);
+                if (video) video.load();
+            } else {
+                if (err) { err.textContent = 'Could not load video URL.'; err.classList.remove('hidden'); }
+                if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+            }
+        })
+        .catch(function() {
+            if (err) { err.textContent = 'Failed to fetch video.'; err.classList.remove('hidden'); }
+            if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+        });
+}
+</script>
 
 {% if vercel_analytics_enabled %}
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>

@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -67,15 +68,6 @@ def logout_view(request):
 @login_required
 def profile_view(request):
     quotes = list(AIQuote.objects.filter(user=request.user).order_by('-created_at')[:100])
-    pickup_slots: list[dict] = []
-    if is_pickup_calendar_configured():
-        try:
-            pickup_slots = list_candidate_slots()
-        except Exception:
-            messages.error(
-                request,
-                'Could not load pickup time slots. Check Calendar API configuration.',
-            )
     eligible = [
         q
         for q in quotes
@@ -84,18 +76,32 @@ def profile_view(request):
         and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
+    denied_quotes = [q for q in quotes if q.denied]
     return render(
         request,
         'users/profile.html',
         {
             'quotes': quotes,
-            'pickup_slots': pickup_slots,
+            'denied_quotes': denied_quotes,
+            'pickup_slots': [],
             'pickup_calendar_configured': is_pickup_calendar_configured(),
             'pickup_eligible_quotes': eligible,
-            # Must match GOOGLE_PICKUP_TIMEZONE / Calendar insert so |date is not shown in UTC
             'pickup_display_timezone': (getattr(settings, 'GOOGLE_PICKUP_TIMEZONE', 'America/Chicago') or 'America/Chicago'),
         },
     )
+
+
+@login_required
+@require_http_methods(['GET'])
+def pickup_slots_view(request):
+    """Return available pickup slots as JSON; called lazily by JS after page load."""
+    if not is_pickup_calendar_configured():
+        return JsonResponse({'slots': []})
+    try:
+        slots = list_candidate_slots()
+    except Exception:
+        return JsonResponse({'slots': [], 'error': 'Could not load pickup time slots.'})
+    return JsonResponse({'slots': slots})
 
 
 @login_required
@@ -232,24 +238,16 @@ def user_items_view(request):
         and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
-    pickup_calendar_configured = is_pickup_calendar_configured()
-    pickup_slots: list[dict] = []
-    if pickup_calendar_configured:
-        try:
-            pickup_slots = list_candidate_slots()
-        except Exception:
-            messages.error(
-                request,
-                'Could not load pickup time slots. Check Calendar API configuration.',
-            )
+    denied_quotes = [q for q in quotes if q.denied]
     return render(
         request,
         'user_items.html',
         {
             'quotes': quotes,
+            'denied_quotes': denied_quotes,
             'approved_pickup_quotes': approved_pickup_quotes,
-            'pickup_slots': pickup_slots,
-            'pickup_calendar_configured': pickup_calendar_configured,
+            'pickup_slots': [],
+            'pickup_calendar_configured': is_pickup_calendar_configured(),
             'pickup_display_timezone': (getattr(settings, 'GOOGLE_PICKUP_TIMEZONE', 'America/Chicago') or 'America/Chicago'),
         },
     )

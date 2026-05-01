@@ -506,3 +506,357 @@ class GoogleCalendarBookingErrorMappingTests(TestCase):
                 item_names=['Item'],
             )
         self.assertIn('permission denied', str(cm.exception).lower())
+
+
+# ---------------------------------------------------------------------------
+# Performance optimization tests
+# ---------------------------------------------------------------------------
+
+class AdminVideoUrlViewTests(TestCase):
+    """Lazy video-URL endpoint used by JS to avoid N×Supabase calls on page load."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user(
+            username='staffvid', email='staff@test.example', password='pw', is_staff=True,
+        )
+        cls.regular = User.objects.create_user(
+            username='regularvid', email='user@test.example', password='pw',
+        )
+        cls.quote_with_video = AIQuote.objects.create(
+            user=cls.staff,
+            item_name='Laptop',
+            description='desc',
+            quote_text='$100',
+            has_video=True,
+            video_path='1/quote_1/current.mp4',
+        )
+        cls.quote_no_video = AIQuote.objects.create(
+            user=cls.staff,
+            item_name='Chair',
+            description='desc',
+            quote_text='$50',
+            has_video=False,
+        )
+
+    def test_returns_signed_url_json_for_staff(self):
+        self.client.login(username='staffvid', password='pw')
+        with patch('core.views.create_signed_video_url', return_value='https://supabase.example/signed') as mock_sign:
+            response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('url', data)
+        self.assertEqual(data['url'], 'https://supabase.example/signed')
+        self.assertIn('mime', data)
+        mock_sign.assert_called_once()
+
+    def test_requires_staff_login(self):
+        self.client.login(username='regularvid', password='pw')
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_requires_authentication(self):
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_with_video.pk}/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_quote_without_video_returns_404(self):
+        self.client.login(username='staffvid', password='pw')
+        response = self.client.get(f'/admin-dashboard/video-url/{self.quote_no_video.pk}/')
+        self.assertEqual(response.status_code, 404)
+
+
+class PickupSlotsViewTests(TestCase):
+    """Lazy pickup-slots endpoint so user_items/profile page loads don't call Calendar API."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username='slotsuser', email='slots@test.example', password='pw',
+        )
+
+    def test_returns_slots_json_when_authenticated(self):
+        self.client.login(username='slotsuser', password='pw')
+        fake_slots = [{'key': 'slot_abc', 'display': 'Mon 9-10 AM'}]
+        with patch('users.views.list_candidate_slots', return_value=fake_slots):
+            with patch('users.views.is_pickup_calendar_configured', return_value=True):
+                response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('slots', data)
+        self.assertEqual(data['slots'], fake_slots)
+
+    def test_returns_empty_slots_when_calendar_not_configured(self):
+        self.client.login(username='slotsuser', password='pw')
+        with patch('users.views.is_pickup_calendar_configured', return_value=False):
+            response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['slots'], [])
+
+    def test_requires_authentication(self):
+        response = self.client.get('/accounts/pickup-slots/')
+        self.assertEqual(response.status_code, 302)
+
+
+class AdminKanbanPerformanceTests(TestCase):
+    """Kanban and admin-quotes page loads must NOT make any Supabase signed-URL calls."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user(
+            username='staffkanban', email='sk@test.example', password='pw', is_staff=True,
+        )
+        AIQuote.objects.create(
+            user=cls.staff, item_name='TV', description='d', quote_text='$80',
+            has_video=True, video_path='1/quote_99/current.mp4',
+        )
+
+    def test_kanban_page_load_does_not_call_supabase(self):
+        self.client.login(username='staffkanban', password='pw')
+        with patch('core.views.create_signed_video_url') as mock_sign:
+            response = self.client.get('/admin-dashboard/')
+        self.assertEqual(response.status_code, 200)
+        mock_sign.assert_not_called()
+
+    def test_admin_quotes_page_load_does_not_call_supabase(self):
+        self.client.login(username='staffkanban', password='pw')
+        with patch('core.views.create_signed_video_url') as mock_sign:
+            response = self.client.get('/admin-quotes/')
+        self.assertEqual(response.status_code, 200)
+        mock_sign.assert_not_called()
+
+
+class UserItemsPerformanceTests(TestCase):
+    """User items and profile page loads must NOT call the Google Calendar API."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username='itemsperf', email='ip@test.example', password='pw',
+        )
+
+    def test_user_items_does_not_call_calendar_api_on_load(self):
+        self.client.login(username='itemsperf', password='pw')
+        with patch('users.views.list_candidate_slots') as mock_slots:
+            response = self.client.get('/accounts/items/')
+        self.assertEqual(response.status_code, 200)
+        mock_slots.assert_not_called()
+
+    def test_profile_does_not_call_calendar_api_on_load(self):
+        self.client.login(username='itemsperf', password='pw')
+        with patch('users.views.list_candidate_slots') as mock_slots:
+            response = self.client.get('/accounts/profile/')
+        self.assertEqual(response.status_code, 200)
+        mock_slots.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Deny item feature
+# ---------------------------------------------------------------------------
+
+class AdminKanbanDenyViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('denystaff', 'ds@test.example', 'pw', is_staff=True)
+        cls.seller = User.objects.create_user('denyseller', 'sell@test.example', 'pw2')
+        cls.quote = AIQuote.objects.create(
+            user=cls.seller,
+            item_name='Old Lamp',
+            description='Broken',
+            quote_text='- SHARE Bear offer (USD): $5\n',
+        )
+
+    def test_deny_requires_staff(self):
+        self.client.login(username='denyseller', password='pw2')
+        r = self.client.post(
+            f'/admin-dashboard/deny/{self.quote.pk}/',
+            {'denial_reason': 'Not up to standard.'},
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_deny_sets_denied_flag_and_reason(self):
+        self.client.login(username='denystaff', password='pw')
+        r = self.client.post(
+            f'/admin-dashboard/deny/{self.quote.pk}/',
+            {'denial_reason': 'Item does not meet condition standards.'},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.quote.refresh_from_db()
+        self.assertTrue(self.quote.denied)
+        self.assertEqual(self.quote.denial_reason, 'Item does not meet condition standards.')
+
+    def test_deny_with_blank_reason_still_sets_flag(self):
+        self.client.login(username='denystaff', password='pw')
+        self.client.post(f'/admin-dashboard/deny/{self.quote.pk}/', {'denial_reason': ''})
+        self.quote.refresh_from_db()
+        self.assertTrue(self.quote.denied)
+
+    def test_undeny_clears_denied_flag(self):
+        self.quote.denied = True
+        self.quote.denial_reason = 'Old reason'
+        self.quote.save(update_fields=['denied', 'denial_reason'])
+        self.client.login(username='denystaff', password='pw')
+        r = self.client.post(f'/admin-dashboard/undeny/{self.quote.pk}/')
+        self.assertEqual(r.status_code, 302)
+        self.quote.refresh_from_db()
+        self.assertFalse(self.quote.denied)
+        self.assertEqual(self.quote.denial_reason, '')
+
+    def test_denied_items_in_denied_context_not_awaiting(self):
+        self.quote.denied = True
+        self.quote.save(update_fields=['denied'])
+        self.client.login(username='denystaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        awaiting_ids = [q.pk for q in r.context['awaiting']]
+        denied_ids = [q.pk for q in r.context['denied']]
+        self.assertNotIn(self.quote.pk, awaiting_ids)
+        self.assertIn(self.quote.pk, denied_ids)
+
+    def test_kanban_context_has_denied_key(self):
+        self.client.login(username='denystaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertIn('denied', r.context)
+
+
+class AdminKanbanUserGroupingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('groupstaff', 'gs@test.example', 'pw', is_staff=True)
+        cls.user_a = User.objects.create_user('groupuserA', 'ga@test.example', 'pw2')
+        cls.user_b = User.objects.create_user('groupuserB', 'gb@test.example', 'pw3')
+        AIQuote.objects.create(
+            user=cls.user_a, item_name='Item A1', description='d', quote_text='$10',
+        )
+        AIQuote.objects.create(
+            user=cls.user_a, item_name='Item A2', description='d', quote_text='$20',
+        )
+        AIQuote.objects.create(
+            user=cls.user_b, item_name='Item B1', description='d', quote_text='$30',
+        )
+
+    def test_awaiting_by_user_contains_both_users(self):
+        self.client.login(username='groupstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        groups = r.context['awaiting_by_user']
+        usernames = [g['user'].username for g in groups]
+        self.assertIn('groupuserA', usernames)
+        self.assertIn('groupuserB', usernames)
+
+    def test_awaiting_by_user_groups_items_under_correct_user(self):
+        self.client.login(username='groupstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        groups = r.context['awaiting_by_user']
+        group_a = next(g for g in groups if g['user'].username == 'groupuserA')
+        self.assertEqual(len(group_a['items']), 2)
+        item_names = [q.item_name for q in group_a['items']]
+        self.assertIn('Item A1', item_names)
+        self.assertIn('Item A2', item_names)
+
+    def test_awaiting_by_user_includes_item_count(self):
+        self.client.login(username='groupstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        groups = r.context['awaiting_by_user']
+        group_a = next(g for g in groups if g['user'].username == 'groupuserA')
+        self.assertEqual(group_a['item_count'], 2)
+
+
+class BuildVideoReminderMailtoUrlTests(TestCase):
+    def test_builds_mailto_with_correct_content(self):
+        from core.views import build_video_reminder_mailto_url
+        user = get_user_model().objects.create_user(
+            'vidremind', 'vr@test.example', 'pw', first_name='Sam'
+        )
+        quote = AIQuote.objects.create(
+            user=user,
+            item_name='Blender',
+            description='High-speed blender',
+            quote_text='- SHARE Bear offer (USD): $30\n',
+        )
+        url = build_video_reminder_mailto_url(quote)
+        self.assertIsNotNone(url)
+        decoded = unquote(url or '')
+        self.assertIn('mailto:vr@test.example', decoded)
+        self.assertIn('Blender', decoded)
+        self.assertIn('upload', decoded.lower())
+
+    def test_returns_none_when_no_email(self):
+        from core.views import build_video_reminder_mailto_url
+        user = get_user_model().objects.create_user('noemailvr', '', 'pw')
+        quote = AIQuote.objects.create(
+            user=user, item_name='Lamp', description='d', quote_text='$5',
+        )
+        self.assertIsNone(build_video_reminder_mailto_url(quote))
+
+    def test_video_reminder_url_attached_to_no_video_awaiting_items(self):
+        User = get_user_model()
+        User.objects.create_user('vstafftest', 'vs@test.example', 'pw', is_staff=True)
+        seller = User.objects.create_user('vseller', 'vsel@test.example', 'pw2')
+        q = AIQuote.objects.create(
+            user=seller, item_name='Fan', description='d', quote_text='$15', has_video=False,
+        )
+        self.client.login(username='vstafftest', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        awaiting = r.context['awaiting']
+        fan = next((x for x in awaiting if x.pk == q.pk), None)
+        self.assertIsNotNone(fan)
+        self.assertIsNotNone(fan.video_reminder_mailto_url)
+
+    def test_no_video_reminder_url_when_item_has_video(self):
+        User = get_user_model()
+        User.objects.create_user('vstafftest2', 'vs2@test.example', 'pw', is_staff=True)
+        seller = User.objects.create_user('vseller2', 'vsel2@test.example', 'pw2')
+        q = AIQuote.objects.create(
+            user=seller, item_name='Mixer', description='d', quote_text='$20',
+            has_video=True, video_path='1/q/x.mp4',
+        )
+        self.client.login(username='vstafftest2', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        awaiting = r.context['awaiting']
+        mixer = next((x for x in awaiting if x.pk == q.pk), None)
+        self.assertIsNotNone(mixer)
+        self.assertIsNone(mixer.video_reminder_mailto_url)
+
+
+class DeniedItemsUserFacingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user('denieduser', 'du@test.example', 'pw')
+        cls.denied_quote = AIQuote.objects.create(
+            user=cls.user,
+            item_name='Cracked Phone',
+            description='Screen cracked badly',
+            quote_text='- SHARE Bear offer (USD): $10\n',
+            denied=True,
+            denial_reason='Item is too damaged for resale.',
+        )
+        cls.normal_quote = AIQuote.objects.create(
+            user=cls.user,
+            item_name='Headphones',
+            description='Good condition',
+            quote_text='- SHARE Bear offer (USD): $40\n',
+        )
+
+    def test_user_items_page_shows_denied_item_and_reason(self):
+        self.client.login(username='denieduser', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Cracked Phone')
+        self.assertContains(r, 'Item is too damaged for resale.')
+
+    def test_user_items_page_has_denied_quotes_context(self):
+        self.client.login(username='denieduser', password='pw')
+        r = self.client.get('/accounts/items/')
+        self.assertIn('denied_quotes', r.context)
+        denied_ids = [q.pk for q in r.context['denied_quotes']]
+        self.assertIn(self.denied_quote.pk, denied_ids)
+        self.assertNotIn(self.normal_quote.pk, denied_ids)

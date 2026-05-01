@@ -4,7 +4,7 @@ from urllib.parse import quote, urlencode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect
+from django.http import Http404, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -42,6 +42,33 @@ def build_approval_mailto_url(quote_obj: AIQuote) -> str | None:
         'If anything seems out of the ordinary or you have any concerns, please reply directly to this email so we can help.',
         '',
         'Best,',
+        'SHARE Bear Admin Team',
+    ]
+    body = '\n'.join(body_lines)
+    return f'mailto:{quote(recipient)}?subject={quote(subject)}&body={quote(body)}'
+
+
+def build_video_reminder_mailto_url(quote_obj: AIQuote) -> str | None:
+    """mailto link reminding the user to upload a video for their awaiting item."""
+    recipient = (quote_obj.user.email or '').strip()
+    if not recipient:
+        return None
+
+    subject = f'Action needed: upload a video for your SHARE Bear item — {quote_obj.item_name}'
+    body_lines = [
+        f'Hi {quote_obj.user.first_name or quote_obj.user.username},',
+        '',
+        f'Your item "{quote_obj.item_name}" is awaiting review, but we still need a short video',
+        "showing the item's current condition before we can process your buy-back offer.",
+        '',
+        'Please log in to your SHARE Bear account and upload a video from your item page:',
+        '  https://sharebear.app',
+        '',
+        'The video only needs to be a few seconds long — just show us the item clearly.',
+        '',
+        'If you have any questions, reply directly to this email.',
+        '',
+        'Thanks,',
         'SHARE Bear Admin Team',
     ]
     body = '\n'.join(body_lines)
@@ -123,12 +150,6 @@ def admin_quotes_view(request):
     quotes = list(
         AIQuote.objects.select_related('user').all().order_by('-created_at')[:200]
     )
-    for q in quotes:
-        q.signed_video_url = None
-        q.video_mime = 'video/mp4'
-        if q.has_video and q.video_path:
-            q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
-            q.video_mime = video_mime_type_from_path(q.video_path)
     return render(
         request,
         'admin_quotes.html',
@@ -338,30 +359,48 @@ def admin_kanban_view(request):
         return HttpResponseForbidden('You do not have access to this page.')
 
     all_quotes = list(AIQuote.objects.select_related('user').order_by('-created_at'))
-    awaiting, approved, picked_up_list = [], [], []
+    awaiting, approved, picked_up_list, denied_list = [], [], [], []
     for q in all_quotes:
         q.approval_mailto_url = None
         q.pickup_location_mailto_url = None
-        q.signed_video_url = None
-        q.video_mime = 'video/mp4'
-        if q.has_video and q.video_path:
-            q.signed_video_url = create_signed_video_url(q.video_path, expires_in=1200)
-            q.video_mime = video_mime_type_from_path(q.video_path)
+        q.video_reminder_mailto_url = None
         if q.picked_up:
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
             q.approval_mailto_url = build_approval_mailto_url(q)
             q.pickup_location_mailto_url = build_pickup_location_mailto_url(q)
             approved.append(q)
+        elif q.denied:
+            denied_list.append(q)
         else:
+            if not q.has_video:
+                q.video_reminder_mailto_url = build_video_reminder_mailto_url(q)
             awaiting.append(q)
+
+    def _group_by_user(items: list) -> list[dict]:
+        groups: dict[int, dict] = {}
+        for q in items:
+            uid = q.user_id
+            if uid not in groups:
+                groups[uid] = {'user': q.user, 'items': [], 'item_count': 0, 'admins': set()}
+            groups[uid]['items'].append(q)
+            groups[uid]['item_count'] += 1
+            if q.assigned_admin_name:
+                groups[uid]['admins'].add(q.assigned_admin_name)
+        return [{**g, 'admins': sorted(g['admins'])} for g in groups.values()]
+
     return render(
         request,
         'admin_kanban.html',
         {
             'awaiting': awaiting,
+            'awaiting_by_user': _group_by_user(awaiting),
             'approved': approved,
+            'approved_by_user': _group_by_user(approved),
             'picked_up': picked_up_list,
+            'picked_up_by_user': _group_by_user(picked_up_list),
+            'denied': denied_list,
+            'denied_by_user': _group_by_user(denied_list),
             'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
         },
     )
@@ -455,6 +494,20 @@ def admin_kanban_unpickup_view(request, quote_id: int):
     q.save(update_fields=['picked_up', 'picked_up_at'])
     messages.success(request, f'Reverted "{q.item_name}" back to Approved.')
     return redirect('admin_kanban')
+
+
+@require_http_methods(['GET'])
+def admin_video_url_view(request, quote_id: int):
+    """Return a fresh signed video URL as JSON; called lazily by JS so page load stays fast."""
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.has_video or not q.video_path:
+        raise Http404('No video for this quote.')
+    url = create_signed_video_url(q.video_path, expires_in=600)
+    return JsonResponse({'url': url or '', 'mime': video_mime_type_from_path(q.video_path)})
 
 
 @login_required
@@ -574,4 +627,39 @@ def admin_kanban_pickup_label_view(request, quote_id: int):
     q.pickup_label_number = number
     q.save(update_fields=['pickup_label_color', 'pickup_label_number'])
     messages.success(request, f'Updated pickup label for "{q.item_name}".')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_deny_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if q.quote_accepted_by_admin or q.picked_up:
+        messages.error(request, f'Cannot deny "{q.item_name}" — it is already approved or picked up.')
+        return redirect('admin_kanban')
+    reason = (request.POST.get('denial_reason') or '').strip()
+    q.denied = True
+    q.denial_reason = reason
+    q.save(update_fields=['denied', 'denial_reason'])
+    messages.success(request, f'Denied "{q.item_name}" for @{q.user.username}.')
+    return redirect('admin_kanban')
+
+
+@require_http_methods(['POST'])
+def admin_kanban_undeny_view(request, quote_id: int):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    q = get_object_or_404(AIQuote, pk=quote_id)
+    if not q.denied:
+        messages.info(request, f'"{q.item_name}" has not been denied.')
+        return redirect('admin_kanban')
+    q.denied = False
+    q.denial_reason = ''
+    q.save(update_fields=['denied', 'denial_reason'])
+    messages.success(request, f'Denial reversed for "{q.item_name}" — moved back to Awaiting.')
     return redirect('admin_kanban')

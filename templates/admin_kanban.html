@@ -47,9 +47,9 @@
             <p class="text-on-surface-variant text-sm mt-1 font-body">Track submitted items across the full buy-back pipeline.</p>
         </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
 
-            {# ---- Column 1: Awaiting ---- #}
+            {# ---- Column 1: Awaiting — grouped by user ---- #}
             <div>
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
@@ -57,29 +57,47 @@
                     <span class="ml-auto text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">{{ awaiting|length }}</span>
                 </div>
                 <div class="space-y-3">
-                    {% for q in awaiting %}
-                    <button type="button" onclick="openModal('modal-{{ q.pk }}')"
-                        class="w-full text-left bg-surface-container-lowest rounded-xl border border-outline-variant/30 px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <p class="font-display font-bold text-sm text-on-surface leading-snug group-hover:text-primary transition-colors">{{ q.item_name }}</p>
-                            <span class="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2 py-0.5">
-                                <span class="material-symbols-outlined text-xs leading-none">schedule</span> Awaiting
-                            </span>
+                    {% for group in awaiting_by_user %}
+                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                        {# User card header — click to expand/collapse #}
+                        <button type="button" onclick="toggleUserGroup('ug-{{ group.user.pk }}')"
+                            class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="font-display font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate">
+                                    {% if group.user.first_name %}{{ group.user.first_name }} {{ group.user.last_name }}{% else %}@{{ group.user.username }}{% endif %}
+                                </p>
+                                <p class="text-xs text-on-surface-variant font-body">@{{ group.user.username }}</p>
+                                <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                    <span class="text-[10px] font-semibold rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5">{{ group.item_count }} item{{ group.item_count|pluralize }}</span>
+                                    {% for admin in group.admins %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">{{ admin }}</span>{% endfor %}
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="ug-chevron-{{ group.user.pk }}">expand_more</span>
+                        </button>
+                        {# Collapsible item list #}
+                        <div id="ug-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
+                            {% for q in group.items %}
+                            <button type="button" onclick="openModal('modal-{{ q.pk }}')"
+                                class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
+                                    <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.created_at|date:"M j" }}</span>
+                                </div>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    {% if q.has_video %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-1.5 py-0.5">Video</span>{% else %}<span class="text-[10px] rounded-full bg-amber-50 text-amber-700 px-1.5 py-0.5">No video</span>{% endif %}
+                                    {% if q.assigned_admin_name %}<span class="text-[10px] rounded-full bg-surface-container text-on-surface-variant px-1.5 py-0.5">{{ q.assigned_admin_name }}</span>{% endif %}
+                                </div>
+                            </button>
+                            {% endfor %}
                         </div>
-                        <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
-                        <p class="text-xs text-on-surface-variant font-body">{{ q.created_at|date:"M j, Y" }}</p>
-                        <div class="mt-2 flex flex-wrap gap-1.5">
-                            {% if q.has_video %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">Video</span>{% endif %}
-                            {% if q.booking_link %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">Booking link</span>{% endif %}
-                        </div>
-                    </button>
+                    </div>
                     {% empty %}
                     <p class="text-sm text-on-surface-variant font-body px-1">No items awaiting review.</p>
                     {% endfor %}
                 </div>
             </div>
 
-            {# ---- Column 2: Approved ---- #}
+            {# ---- Column 2: Approved — grouped by user ---- #}
             <div>
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
@@ -87,32 +105,45 @@
                     <span class="ml-auto text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">{{ approved|length }}</span>
                 </div>
                 <div class="space-y-3">
-                    {% for q in approved %}
-                    <button type="button" onclick="openModal('modal-{{ q.pk }}')"
-                        class="w-full text-left bg-surface-container-lowest rounded-xl border border-outline-variant/30 px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <p class="font-display font-bold text-sm text-on-surface leading-snug group-hover:text-primary transition-colors">{{ q.item_name }}</p>
-                            <span class="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2 py-0.5">
-                                <span class="material-symbols-outlined text-xs leading-none">check_circle</span> Approved
-                            </span>
+                    {% for group in approved_by_user %}
+                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                        <button type="button" onclick="toggleUserGroup('appr-{{ group.user.pk }}')"
+                            class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="font-display font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate">
+                                    {% if group.user.first_name %}{{ group.user.first_name }} {{ group.user.last_name }}{% else %}@{{ group.user.username }}{% endif %}
+                                </p>
+                                <p class="text-xs text-on-surface-variant font-body">@{{ group.user.username }}</p>
+                                <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                    <span class="text-[10px] font-semibold rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5">{{ group.item_count }} item{{ group.item_count|pluralize }}</span>
+                                    {% for admin in group.admins %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">{{ admin }}</span>{% endfor %}
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="appr-chevron-{{ group.user.pk }}">expand_more</span>
+                        </button>
+                        <div id="appr-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
+                            {% for q in group.items %}
+                            <button type="button" onclick="openModal('modal-{{ q.pk }}')"
+                                class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
+                                    <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.quote_reviewed_at|date:"M j" }}</span>
+                                </div>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    {% if q.google_event_id or q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5">Booked</span>{% endif %}
+                                    {% if q.assigned_admin_name %}<span class="text-[10px] rounded-full bg-surface-container text-on-surface-variant px-1.5 py-0.5">{{ q.assigned_admin_name }}</span>{% endif %}
+                                </div>
+                            </button>
+                            {% endfor %}
                         </div>
-                        <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
-                        {% if q.assigned_admin_name %}
-                        <p class="text-xs text-on-surface-variant font-body">Admin: {{ q.assigned_admin_name }}</p>
-                        {% endif %}
-                        <p class="text-xs text-on-surface-variant font-body">Approved {{ q.quote_reviewed_at|date:"M j, Y" }}</p>
-                        <div class="mt-2 flex flex-wrap gap-1.5">
-                            {% if q.google_event_id or q.booking_initiated %}<span class="text-[10px] font-bold rounded-full bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5">Booked</span>{% endif %}
-                            {% if q.booking_link %}<span class="text-[10px] font-medium rounded-full bg-secondary-container/40 text-on-secondary-container px-2 py-0.5">Booking link</span>{% endif %}
-                        </div>
-                    </button>
+                    </div>
                     {% empty %}
                     <p class="text-sm text-on-surface-variant font-body px-1">No approved items yet.</p>
                     {% endfor %}
                 </div>
             </div>
 
-            {# ---- Column 3: Picked Up ---- #}
+            {# ---- Column 3: Picked Up — grouped by user ---- #}
             <div>
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0"></span>
@@ -120,23 +151,78 @@
                     <span class="ml-auto text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">{{ picked_up|length }}</span>
                 </div>
                 <div class="space-y-3">
-                    {% for q in picked_up %}
-                    <button type="button" onclick="openModal('modal-{{ q.pk }}')"
-                        class="w-full text-left bg-surface-container-lowest rounded-xl border border-outline-variant/30 px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <p class="font-display font-bold text-sm text-on-surface leading-snug group-hover:text-primary transition-colors">{{ q.item_name }}</p>
-                            <span class="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5">
-                                <span class="material-symbols-outlined text-xs leading-none">inventory_2</span> Picked Up
-                            </span>
+                    {% for group in picked_up_by_user %}
+                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                        <button type="button" onclick="toggleUserGroup('pckup-{{ group.user.pk }}')"
+                            class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="font-display font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate">
+                                    {% if group.user.first_name %}{{ group.user.first_name }} {{ group.user.last_name }}{% else %}@{{ group.user.username }}{% endif %}
+                                </p>
+                                <p class="text-xs text-on-surface-variant font-body">@{{ group.user.username }}</p>
+                                <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                    <span class="text-[10px] font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5">{{ group.item_count }} item{{ group.item_count|pluralize }}</span>
+                                    {% for admin in group.admins %}<span class="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">{{ admin }}</span>{% endfor %}
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="pckup-chevron-{{ group.user.pk }}">expand_more</span>
+                        </button>
+                        <div id="pckup-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
+                            {% for q in group.items %}
+                            <button type="button" onclick="openModal('modal-{{ q.pk }}')"
+                                class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
+                                    <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.picked_up_at|date:"M j" }}</span>
+                                </div>
+                                {% if q.pickup_label_color or q.pickup_label_number %}
+                                <p class="text-[10px] text-on-surface-variant font-body mt-1">Tag: {{ q.pickup_label_color|default:"—"|title }}{% if q.pickup_label_number %} #{{ q.pickup_label_number }}{% endif %}</p>
+                                {% endif %}
+                            </button>
+                            {% endfor %}
                         </div>
-                        <p class="text-xs text-on-surface-variant font-body mb-1">@{{ q.user.username }}</p>
-                        {% if q.pickup_label_color or q.pickup_label_number %}
-                        <p class="text-xs text-on-surface-variant font-body">Tag: {{ q.pickup_label_color|default:"—"|title }} {% if q.pickup_label_number %}#{{ q.pickup_label_number }}{% endif %}</p>
-                        {% endif %}
-                        <p class="text-xs text-on-surface-variant font-body">{{ q.picked_up_at|date:"M j, Y" }}</p>
-                    </button>
+                    </div>
                     {% empty %}
                     <p class="text-sm text-on-surface-variant font-body px-1">No items picked up yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# ---- Column 4: Denied — grouped by user ---- #}
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0"></span>
+                    <h2 class="font-display font-bold text-base text-on-surface tracking-tight">Denied</h2>
+                    <span class="ml-auto text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">{{ denied|length }}</span>
+                </div>
+                <div class="space-y-3">
+                    {% for group in denied_by_user %}
+                    <div class="bg-surface-container-lowest rounded-xl border border-red-200/60 overflow-hidden">
+                        <button type="button" onclick="toggleUserGroup('deny-{{ group.user.pk }}')"
+                            class="w-full text-left px-4 py-3 hover:bg-red-50 transition-colors group flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="font-display font-bold text-sm text-on-surface group-hover:text-red-700 transition-colors truncate">
+                                    {% if group.user.first_name %}{{ group.user.first_name }} {{ group.user.last_name }}{% else %}@{{ group.user.username }}{% endif %}
+                                </p>
+                                <p class="text-xs text-on-surface-variant font-body">@{{ group.user.username }}</p>
+                                <div class="mt-1.5">
+                                    <span class="text-[10px] font-semibold rounded-full bg-red-50 text-red-800 border border-red-200 px-2 py-0.5">{{ group.item_count }} item{{ group.item_count|pluralize }}</span>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-base flex-shrink-0 mt-0.5 transition-transform" id="deny-chevron-{{ group.user.pk }}">expand_more</span>
+                        </button>
+                        <div id="deny-{{ group.user.pk }}" class="hidden border-t border-red-200/40 divide-y divide-red-100">
+                            {% for q in group.items %}
+                            <button type="button" onclick="openModal('modal-{{ q.pk }}')"
+                                class="w-full text-left px-4 py-3 hover:bg-red-50 transition-colors group">
+                                <p class="font-body font-semibold text-sm text-on-surface group-hover:text-red-700 transition-colors leading-snug">{{ q.item_name }}</p>
+                                {% if q.denial_reason %}<p class="text-[10px] text-red-700 font-body mt-0.5 truncate">{{ q.denial_reason }}</p>{% endif %}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-on-surface-variant font-body px-1">No denied items.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -161,17 +247,23 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -181,7 +273,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -189,7 +281,7 @@
             </div>
         </dl>
         {% if q.has_video %}
-        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}" class="space-y-4">
+        <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}" class="space-y-4 mb-4">
             {% csrf_token %}
             <div>
                 <label for="final-offer-kanban-{{ q.pk }}" class="block text-sm font-medium text-on-surface mb-1">Confirmed buy-back (USD)</label>
@@ -201,11 +293,62 @@
             </button>
         </form>
         {% else %}
-        <div class="w-full rounded-xl bg-surface-container px-5 py-3 text-sm text-on-surface-variant font-body text-center border border-outline-variant/30">
+        <div class="w-full rounded-xl bg-surface-container px-5 py-3 text-sm text-on-surface-variant font-body text-center border border-outline-variant/30 mb-4">
             <span class="material-symbols-outlined text-base align-middle mr-1">upload</span>
             Awaiting video upload before approval
         </div>
+        {% if q.video_reminder_mailto_url %}
+        <a href="{{ q.video_reminder_mailto_url }}" class="w-full mb-4 inline-flex items-center justify-center gap-2 font-body font-semibold text-sm text-primary border border-primary/30 px-5 py-2.5 rounded-xl hover:bg-primary hover:text-on-primary transition-all">
+            <span class="material-symbols-outlined text-base">mail</span> Email user to upload video
+        </a>
         {% endif %}
+        {% endif %}
+        {# Deny form #}
+        <details class="mt-2">
+            <summary class="text-xs font-semibold text-red-600 cursor-pointer hover:text-red-800 select-none">Deny this item…</summary>
+            <form method="post" action="{% url 'admin_kanban_deny' quote_id=q.pk %}" class="mt-3 space-y-3">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface mb-1">Reason (shown to user)</label>
+                    <textarea name="denial_reason" rows="2" placeholder="e.g. Item is too damaged for resale." class="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"></textarea>
+                </div>
+                <button type="submit" class="w-full font-body font-semibold text-red-800 bg-red-100 border border-red-200 px-5 py-2.5 rounded-xl hover:bg-red-200 transition-colors">
+                    Deny item
+                </button>
+            </form>
+        </details>
+    </div>
+</div>
+{% endfor %}
+
+{# ===== MODALS — Denied ===== #}
+{% for q in denied %}
+<div id="modal-{{ q.pk }}" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ q.pk }}"
+     class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('modal-{{ q.pk }}')"></div>
+    <div class="relative z-10 bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+        <button type="button" onclick="closeModal('modal-{{ q.pk }}')"
+                class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors z-20">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="mb-5">
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-800 border border-red-200 rounded-full px-2 py-0.5 mb-2">
+                <span class="material-symbols-outlined text-xs">block</span> Denied
+            </span>
+            <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
+        </div>
+        <dl class="space-y-3 text-sm font-body mb-6">
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Submitted</dt><dd class="text-on-surface">{{ q.created_at|date:"M j, Y g:i A" }}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Description</dt><dd class="text-on-surface leading-relaxed">{{ q.description }}</dd></div>
+            <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Denial reason</dt><dd class="text-red-800 leading-relaxed">{{ q.denial_reason|default:"No reason provided." }}</dd></div>
+        </dl>
+        <form method="post" action="{% url 'admin_kanban_undeny' quote_id=q.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="w-full font-body font-semibold text-on-surface bg-surface-container border border-outline-variant/40 px-5 py-2.5 rounded-xl hover:bg-surface-container-high transition-colors">
+                Undo denial — move back to Awaiting
+            </button>
+        </form>
     </div>
 </div>
 {% endfor %}
@@ -231,17 +374,23 @@
             </div>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -253,7 +402,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -327,17 +476,23 @@
             </span>
             <h3 id="modal-title-{{ q.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">{{ q.item_name }}</h3>
         </div>
-        {% if q.has_video and q.signed_video_url %}
-        <div class="mb-5 rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
-            <video class="w-full h-full object-contain" controls playsinline preload="metadata" data-modal-video>
-                <source src="{{ q.signed_video_url }}" type="{{ q.video_mime }}">
-            </video>
+        {% if q.has_video %}
+        <div class="mb-5" id="video-wrap-{{ q.pk }}">
+            <button id="video-btn-{{ q.pk }}" onclick="loadVideo({{ q.pk }})" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">play_circle</span>Load Video
+            </button>
+            <div id="video-player-{{ q.pk }}" class="hidden mt-3">
+                <div class="rounded-xl overflow-hidden bg-black/90 aspect-video w-full max-h-[50vh]">
+                    <video id="video-el-{{ q.pk }}" class="w-full h-full object-contain" controls playsinline preload="none">
+                        <source id="video-src-{{ q.pk }}" src="" type="video/mp4">
+                    </video>
+                </div>
+                <p class="text-xs text-on-surface-variant font-body mt-2">
+                    <a id="video-link-{{ q.pk }}" href="#" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open in new tab</a>
+                </p>
+            </div>
+            <p id="video-error-{{ q.pk }}" class="hidden text-sm text-red-600 font-body mt-2"></p>
         </div>
-        <p class="text-xs text-on-surface-variant font-body mb-5">
-            <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">Open video in new tab</a>
-        </p>
-        {% elif q.has_video %}
-        <p class="text-sm text-on-surface-variant font-body mb-5">Video on file, but a signed URL could not be created—check storage configuration.</p>
         {% endif %}
         <dl class="space-y-3 text-sm font-body mb-6">
             <div class="flex gap-3"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">User</dt><dd class="text-on-surface">@{{ q.user.username }}{% if q.user.first_name %} — {{ q.user.first_name }} {{ q.user.last_name }}{% endif %}</dd></div>
@@ -350,7 +505,7 @@
             <div class="flex gap-3 items-center"><dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Offer</dt><dd class="font-display font-extrabold text-2xl text-primary tabular-nums">{{ q.offer_display }}</dd></div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Video</dt>
-                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% elif q.signed_video_url %}<span class="text-on-surface text-sm">Use the player above, or <a href="{{ q.signed_video_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-primary hover:underline">open in a new tab</a>.</span>{% else %}<span class="text-on-surface-variant text-xs">On file; URL unavailable</span>{% endif %}</dd>
+                <dd>{% if not q.has_video %}<span class="text-on-surface-variant">No video yet</span>{% else %}<span class="text-on-surface text-sm">Use the "Load Video" button above to watch.</span>{% endif %}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-28 flex-shrink-0 text-on-surface-variant font-medium">Pickup</dt>
@@ -413,6 +568,44 @@ document.addEventListener('keydown', function(e) {
         });
     }
 });
+function toggleUserGroup(id) {
+    var panel = document.getElementById(id);
+    if (!panel) return;
+    // id format: "prefix-userId" → chevron id: "prefix-chevron-userId"
+    var chevronId = id.replace(/^([^-]+)-/, '$1-chevron-');
+    var chevron = document.getElementById(chevronId);
+    var isOpen = !panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', isOpen);
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+function loadVideo(quoteId) {
+    var btn = document.getElementById('video-btn-' + quoteId);
+    var player = document.getElementById('video-player-' + quoteId);
+    var src = document.getElementById('video-src-' + quoteId);
+    var link = document.getElementById('video-link-' + quoteId);
+    var err = document.getElementById('video-error-' + quoteId);
+    if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+    fetch('/admin-dashboard/video-url/' + quoteId + '/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.url) {
+                window.open(data.url, '_blank', 'noopener,noreferrer');
+                if (src) { src.src = data.url; src.type = data.mime || 'video/mp4'; }
+                if (link) { link.href = data.url; }
+                if (player) player.classList.remove('hidden');
+                if (btn) { btn.textContent = 'Open Video'; btn.disabled = false; }
+                var video = document.getElementById('video-el-' + quoteId);
+                if (video) video.load();
+            } else {
+                if (err) { err.textContent = 'Could not load video URL.'; err.classList.remove('hidden'); }
+                if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+            }
+        })
+        .catch(function() {
+            if (err) { err.textContent = 'Failed to fetch video.'; err.classList.remove('hidden'); }
+            if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
+        });
+}
 </script>
 
 {% if vercel_analytics_enabled %}

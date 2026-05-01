@@ -64,12 +64,10 @@
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="font-display font-bold text-lg text-on-surface">Schedule Pickup</h2>
-                    {% if approved_pickup_quotes and pickup_slots %}
-                    <p class="text-sm text-on-surface-variant font-body mt-1">Choose approved items and an open time slot to book pickup in Google Calendar.</p>
+                    {% if approved_pickup_quotes and pickup_calendar_configured %}
+                    <p id="pickup-status-msg" class="text-sm text-on-surface-variant font-body mt-1">Loading available pickup times…</p>
                     {% elif approved_pickup_quotes and not pickup_calendar_configured %}
                     <p class="text-sm text-on-surface-variant font-body mt-1">Pickup scheduling is not configured yet. Contact SHARE Bear support.</p>
-                    {% elif approved_pickup_quotes and not pickup_slots %}
-                    <p class="text-sm text-on-surface-variant font-body mt-1">No open pickup time slots are available right now. Check back later.</p>
                     {% else %}
                     <p class="text-sm text-on-surface-variant font-body mt-1">No approved items are ready for pickup yet. Once approved, they will appear here.</p>
                     {% endif %}
@@ -77,16 +75,42 @@
                 <button
                     id="open-pickup-modal"
                     type="button"
-                    class="text-sm font-semibold font-body px-4 py-2 rounded-full transition-all {% if approved_pickup_quotes and pickup_slots and pickup_calendar_configured %}bg-primary text-on-primary hover:bg-primary-container{% else %}bg-surface-container text-on-surface-variant cursor-not-allowed{% endif %}"
-                    {% if not approved_pickup_quotes or not pickup_slots or not pickup_calendar_configured %}disabled aria-disabled="true"{% endif %}
+                    class="text-sm font-semibold font-body px-4 py-2 rounded-full transition-all bg-surface-container text-on-surface-variant cursor-not-allowed"
+                    disabled aria-disabled="true"
                 >
                     Book pickup time
                 </button>
             </div>
         </div>
 
+        {% if denied_quotes %}
+        <div class="mb-6">
+            <h2 class="font-display font-bold text-base text-on-surface mb-3 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0"></span>
+                Not Accepted
+            </h2>
+            <div class="space-y-3">
+                {% for quote in denied_quotes %}
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                        <p class="font-display font-bold text-sm text-on-surface">{{ quote.item_name }}</p>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 rounded-full px-2 py-0.5">
+                            <span class="material-symbols-outlined text-xs">block</span> Not Accepted
+                        </span>
+                    </div>
+                    {% if quote.denial_reason %}
+                    <p class="text-sm text-red-900 font-body">{{ quote.denial_reason }}</p>
+                    {% else %}
+                    <p class="text-sm text-red-700 font-body">This item did not meet SHARE Bear's standards. Contact us if you have questions.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="space-y-4">
-            {% for quote in quotes %}
+            {% for quote in quotes %}{% if not quote.denied %}
             <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <h3 class="font-display font-bold text-lg tracking-tight text-on-surface">{{ quote.item_name }}</h3>
@@ -124,7 +148,7 @@
                     </div>
                 </div>
             </article>
-            {% empty %}
+            {% endif %}{% empty %}
             <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-6">
                 <p class="text-sm text-on-surface-variant font-body">You do not have any items yet.</p>
             </div>
@@ -185,19 +209,13 @@
                     </button>
                     <form id="booking-initiate-form" method="post" action="{% url 'profile_attach_pickup' %}">
                         {% csrf_token %}
-                        {% if pickup_slots %}
                         <div class="mb-3">
                             <label for="pickup-slot-select" class="block text-xs font-semibold text-on-surface mb-1.5 uppercase tracking-wide">Pickup time</label>
                             <select name="slot_key" id="pickup-slot-select" required class="w-full min-w-[280px] rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2 text-sm text-on-surface font-body">
-                                <option value="">Select a time slot…</option>
-                                {% for s in pickup_slots %}
-                                <option value="{{ s.postKey }}">{% if s.start %}{% timezone pickup_display_timezone %}{{ s.summary }} — {{ s.start|date:"D M j, Y" }}, {{ s.start|date:"g:i A" }}{% if s.end %} – {{ s.end|date:"g:i A" }}{% endif %}{% endtimezone %}{% else %}{{ s.summary }}{% endif %}</option>
-                                {% endfor %}
+                                <option value="">Loading available times…</option>
                             </select>
+                            <p id="slots-loading-msg" class="text-xs text-on-surface-variant font-body mt-1">Fetching open slots…</p>
                         </div>
-                        {% else %}
-                        <p class="mb-3 text-xs text-on-surface-variant font-body">No time slots are currently available.</p>
-                        {% endif %}
                         <div id="booking-quote-inputs"></div>
                         <button
                             type="submit"
@@ -314,6 +332,68 @@
         }
 
         updateSelectedSummary();
+
+        {% if approved_pickup_quotes and pickup_calendar_configured %}
+        var slotsLoaded = false;
+        var statusMsg = document.getElementById('pickup-status-msg');
+        var loadingMsg = document.getElementById('slots-loading-msg');
+
+        function formatSlotLabel(s) {
+            if (!s.start) return s.summary || 'Unknown time';
+            var d = new Date(s.start);
+            var de = s.end ? new Date(s.end) : null;
+            var opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+            var timeOpts = { hour: 'numeric', minute: '2-digit' };
+            var datePart = d.toLocaleDateString(undefined, opts);
+            var startTime = d.toLocaleTimeString(undefined, timeOpts);
+            var endTime = de ? ' – ' + de.toLocaleTimeString(undefined, timeOpts) : '';
+            return (s.summary || 'Pickup') + ' — ' + datePart + ', ' + startTime + endTime;
+        }
+
+        function fetchPickupSlots() {
+            fetch('/accounts/pickup-slots/')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var slots = data.slots || [];
+                    if (slotSelect) {
+                        slotSelect.innerHTML = '';
+                        if (slots.length === 0) {
+                            var opt = document.createElement('option');
+                            opt.value = '';
+                            opt.textContent = 'No slots available right now';
+                            slotSelect.appendChild(opt);
+                            if (statusMsg) statusMsg.textContent = 'No open pickup time slots are available right now. Check back later.';
+                        } else {
+                            var blank = document.createElement('option');
+                            blank.value = '';
+                            blank.textContent = 'Select a time slot…';
+                            slotSelect.appendChild(blank);
+                            slots.forEach(function(s) {
+                                var opt = document.createElement('option');
+                                opt.value = s.postKey;
+                                opt.textContent = formatSlotLabel(s);
+                                slotSelect.appendChild(opt);
+                            });
+                            slotsLoaded = true;
+                            if (statusMsg) statusMsg.textContent = 'Choose approved items and an open time slot to book pickup in Google Calendar.';
+                            if (openBtn) {
+                                openBtn.disabled = false;
+                                openBtn.setAttribute('aria-disabled', 'false');
+                                openBtn.className = openBtn.className.replace('bg-surface-container text-on-surface-variant cursor-not-allowed', 'bg-primary text-on-primary hover:bg-primary-container');
+                            }
+                        }
+                    }
+                    if (loadingMsg) loadingMsg.classList.add('hidden');
+                    updateSelectedSummary();
+                })
+                .catch(function() {
+                    if (statusMsg) statusMsg.textContent = 'Could not load pickup times. Please refresh the page.';
+                    if (loadingMsg) loadingMsg.classList.add('hidden');
+                });
+        }
+
+        fetchPickupSlots();
+        {% endif %}
     })();
 </script>
 {% endblock %}
