@@ -83,8 +83,34 @@
             </div>
         </div>
 
+        {% if denied_quotes %}
+        <div class="mb-6">
+            <h2 class="font-display font-bold text-base text-on-surface mb-3 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0"></span>
+                Not Accepted
+            </h2>
+            <div class="space-y-3">
+                {% for quote in denied_quotes %}
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                        <p class="font-display font-bold text-sm text-on-surface">{{ quote.item_name }}</p>
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 rounded-full px-2 py-0.5">
+                            <span class="material-symbols-outlined text-xs">block</span> Not Accepted
+                        </span>
+                    </div>
+                    {% if quote.denial_reason %}
+                    <p class="text-sm text-red-900 font-body">{{ quote.denial_reason }}</p>
+                    {% else %}
+                    <p class="text-sm text-red-700 font-body">This item did not meet SHARE Bear's standards. Contact us if you have questions.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="space-y-4">
-            {% for quote in quotes %}
+            {% for quote in quotes %}{% if not quote.denied %}
             <article class="bg-surface-container-lowest rounded-xl ambient-shadow p-5">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <h3 class="font-display font-bold text-lg tracking-tight text-on-surface">{{ quote.item_name }}</h3>
@@ -122,7 +148,7 @@
                     </div>
                 </div>
             </article>
-            {% empty %}
+            {% endif %}{% empty %}
             <div class="bg-surface-container-lowest rounded-xl ambient-shadow p-6">
                 <p class="text-sm text-on-surface-variant font-body">You do not have any items yet.</p>
             </div>

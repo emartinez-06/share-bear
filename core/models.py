@@ -76,6 +76,15 @@ class AIQuote(models.Model):
         blank=True,
         help_text='Admin team member currently handling this item.',
     )
+    denied = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='Set when an admin has denied this buy-back submission.',
+    )
+    denial_reason = models.TextField(
+        blank=True,
+        help_text='Admin explanation shown to the user when their item is denied.',
+    )
     pickup_label_color = models.CharField(
         max_length=32,
         blank=True,

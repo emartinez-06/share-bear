@@ -76,11 +76,13 @@ def profile_view(request):
         and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
+    denied_quotes = [q for q in quotes if q.denied]
     return render(
         request,
         'users/profile.html',
         {
             'quotes': quotes,
+            'denied_quotes': denied_quotes,
             'pickup_slots': [],
             'pickup_calendar_configured': is_pickup_calendar_configured(),
             'pickup_eligible_quotes': eligible,
@@ -236,11 +238,13 @@ def user_items_view(request):
         and not q.booking_initiated
         and not (q.google_event_id or '').strip()
     ]
+    denied_quotes = [q for q in quotes if q.denied]
     return render(
         request,
         'user_items.html',
         {
             'quotes': quotes,
+            'denied_quotes': denied_quotes,
             'approved_pickup_quotes': approved_pickup_quotes,
             'pickup_slots': [],
             'pickup_calendar_configured': is_pickup_calendar_configured(),
