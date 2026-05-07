@@ -65,6 +65,42 @@ def upload_quote_video(*, file_bytes: bytes, object_path: str, content_type: str
         raise RuntimeError(f'Video upload failed ({e.code}).') from None
 
 
+def create_presigned_upload_url(object_path: str) -> str | None:
+    """
+    Create a Supabase Storage presigned upload URL for direct client-side upload.
+    The browser can PUT the file bytes directly to the returned URL without hitting Django/Vercel.
+    """
+    if not is_storage_configured() or not object_path:
+        return None
+    base = (settings.SUPABASE_URL or '').rstrip('/')
+    bucket = settings.SUPABASE_QUOTE_VIDEOS_BUCKET
+    enc = _encode_object_path(object_path)
+    url = f'{base}/storage/v1/object/upload/sign/{urllib.parse.quote(bucket)}/{enc}'
+    req = urllib.request.Request(
+        url,
+        data=b'{}',
+        method='POST',
+        headers={**_auth_headers(), 'Content-Type': 'application/json'},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.load(resp)
+    except urllib.error.HTTPError as e:
+        err = e.read().decode('utf-8', errors='replace')
+        logger.error('Supabase presigned upload sign HTTP %s: %s', e.code, err)
+        return None
+    except Exception:
+        logger.exception('Supabase presigned upload sign failed')
+        return None
+
+    url_path = data.get('url') or data.get('signedURL') or data.get('signedUrl')
+    if not url_path:
+        return None
+    if url_path.startswith('http://') or url_path.startswith('https://'):
+        return url_path
+    return f'{base}{url_path}'
+
+
 def create_signed_video_url(object_path: str, expires_in: int = 600) -> str | None:
     """
     Return a time-limited URL to read a private object, or None if not configured.
