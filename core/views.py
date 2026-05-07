@@ -899,6 +899,51 @@ def admin_kanban_take_over_view(request, user_id: int):
     return redirect('admin_kanban')
 
 
+@require_http_methods(['POST'])
+def admin_kanban_bulk_pickup_view(request):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+
+    raw_ids = request.POST.getlist('quote_ids')
+    quote_ids: list[int] = []
+    for x in raw_ids:
+        try:
+            quote_ids.append(int(x))
+        except (TypeError, ValueError):
+            continue
+    quote_ids = sorted(set(quote_ids))
+
+    if not quote_ids:
+        messages.error(request, 'No items selected for pickup.')
+        return redirect('admin_kanban')
+
+    eligible = list(
+        AIQuote.objects.filter(
+            pk__in=quote_ids,
+            quote_accepted_by_admin=True,
+            picked_up=False,
+        ).select_related('user')
+    )
+
+    if not eligible:
+        messages.error(request, 'None of the selected items are eligible for pickup.')
+        return redirect('admin_kanban')
+
+    now = timezone.now()
+    eligible_ids = [q.pk for q in eligible]
+    AIQuote.objects.filter(pk__in=eligible_ids).update(picked_up=True, picked_up_at=now)
+
+    total = format_offers_total([q.offer_display for q in eligible])
+    user_label = f'@{eligible[0].user.username}' if eligible else ''
+    messages.success(
+        request,
+        f'Marked {len(eligible)} item(s) as picked up for {user_label}. Total paid: {total}.',
+    )
+    return redirect('admin_kanban')
+
+
 _ALLOWED_VIDEO_EXTENSIONS = frozenset({'.mp4', '.webm', '.mov', '.m4v'})
 
 

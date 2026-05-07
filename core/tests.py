@@ -1434,3 +1434,109 @@ class QuoteVideoConfirmViewTests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(r.status_code, 400)
+
+
+# ---------------------------------------------------------------------------
+# Bulk pickup session feature
+# ---------------------------------------------------------------------------
+
+class AdminKanbanBulkPickupTests(TestCase):
+    """Admin can mark multiple approved items as picked up in one submission."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('bulkstaff', 'bs@test.example', 'pw', is_staff=True)
+        cls.seller = User.objects.create_user('bulkseller', 'sell@test.example', 'pw2')
+        cls.q1 = AIQuote.objects.create(
+            user=cls.seller, item_name='Laptop', description='d',
+            quote_text='- SHARE Bear offer (USD): $200\n',
+            has_video=True, video_path='1/q/a.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$200',
+        )
+        cls.q2 = AIQuote.objects.create(
+            user=cls.seller, item_name='Phone', description='d',
+            quote_text='- SHARE Bear offer (USD): $100\n',
+            has_video=True, video_path='1/q/b.mp4',
+            quote_accepted_by_admin=True, quote_reviewed_at=timezone.now(),
+            admin_confirmed_offer_display='$100',
+        )
+        cls.q_unapproved = AIQuote.objects.create(
+            user=cls.seller, item_name='Chair', description='d',
+            quote_text='- SHARE Bear offer (USD): $30\n',
+        )
+
+    def test_bulk_pickup_marks_all_selected_items(self):
+        self.client.login(username='bulkstaff', password='pw')
+        r = self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk), str(self.q2.pk)]},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.q1.refresh_from_db()
+        self.q2.refresh_from_db()
+        self.assertTrue(self.q1.picked_up)
+        self.assertTrue(self.q2.picked_up)
+
+    def test_bulk_pickup_sets_picked_up_at_timestamp(self):
+        self.client.login(username='bulkstaff', password='pw')
+        self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk)]},
+        )
+        self.q1.refresh_from_db()
+        self.assertIsNotNone(self.q1.picked_up_at)
+
+    def test_bulk_pickup_requires_staff(self):
+        self.client.login(username='bulkseller', password='pw2')
+        r = self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk)]},
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_bulk_pickup_requires_authentication(self):
+        r = self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk)]},
+        )
+        self.assertEqual(r.status_code, 302)
+
+    def test_bulk_pickup_skips_unapproved_items_silently(self):
+        """Unapproved items in the list are ignored; approved ones still go through."""
+        self.client.login(username='bulkstaff', password='pw')
+        self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk), str(self.q_unapproved.pk)]},
+        )
+        self.q1.refresh_from_db()
+        self.q_unapproved.refresh_from_db()
+        self.assertTrue(self.q1.picked_up)
+        self.assertFalse(self.q_unapproved.picked_up)
+
+    def test_bulk_pickup_empty_selection_redirects_with_error(self):
+        self.client.login(username='bulkstaff', password='pw')
+        r = self.client.post('/admin-dashboard/bulk-pickup/', {'quote_ids': []}, follow=True)
+        self.assertEqual(r.status_code, 200)
+        messages_list = list(r.context['messages'])
+        self.assertTrue(any('No items' in str(m) or 'no items' in str(m).lower() for m in messages_list))
+
+    def test_bulk_pickup_success_message_includes_total(self):
+        self.client.login(username='bulkstaff', password='pw')
+        r = self.client.post(
+            '/admin-dashboard/bulk-pickup/',
+            {'quote_ids': [str(self.q1.pk), str(self.q2.pk)]},
+            follow=True,
+        )
+        self.assertEqual(r.status_code, 200)
+        messages_list = list(r.context['messages'])
+        combined = ' '.join(str(m) for m in messages_list)
+        self.assertIn('$300', combined)
+
+    def test_kanban_approved_card_shows_pickup_session_button(self):
+        """Each approved user card has a 'Pickup session' button."""
+        self.client.login(username='bulkstaff', password='pw')
+        r = self.client.get('/admin-dashboard/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Pickup session')
