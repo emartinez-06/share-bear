@@ -170,6 +170,14 @@
                             </a>
                         </div>
                         {% endif %}
+                        <div class="px-4 py-2.5 border-t border-primary/10 bg-primary/5">
+                            <button type="button"
+                                onclick="initPickupSession('{{ group.user.pk }}'); openModal('pickup-session-{{ group.user.pk }}')"
+                                class="inline-flex items-center gap-1.5 text-xs font-bold font-body text-primary hover:underline">
+                                <span class="material-symbols-outlined text-sm">handshake</span>
+                                Pickup session
+                            </button>
+                        </div>
                         <div id="appr-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
                             {% for q in group.items %}
                             <button type="button" onclick="openModal('modal-{{ q.pk }}')"
@@ -192,6 +200,58 @@
                     {% endfor %}
                 </div>
             </div>
+
+            {# ---- Pickup-session modals (one per approved user, outside the column grid) ---- #}
+            {% for group in approved_by_user %}
+            <div id="pickup-session-{{ group.user.pk }}" role="dialog" aria-modal="true" aria-labelledby="ps-title-{{ group.user.pk }}"
+                class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('pickup-session-{{ group.user.pk }}')"></div>
+                <div class="relative bg-surface rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-outline-variant/20">
+                        <div>
+                            <h3 id="ps-title-{{ group.user.pk }}" class="font-display font-bold text-xl text-primary tracking-tightest">Pickup Session</h3>
+                            <p class="text-sm text-on-surface-variant font-body mt-0.5">
+                                {% if group.user.first_name %}{{ group.user.first_name }} {{ group.user.last_name }}{% else %}@{{ group.user.username }}{% endif %}
+                            </p>
+                        </div>
+                        <button type="button" onclick="closeModal('pickup-session-{{ group.user.pk }}')"
+                            class="text-on-surface-variant hover:text-primary transition-colors mt-0.5">
+                            <span class="material-symbols-outlined text-2xl">close</span>
+                        </button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+                        <p class="text-xs text-on-surface-variant font-body">Check each item that is physically present at the meetup.</p>
+                        {% for q in group.items %}
+                        <label class="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/30 hover:bg-surface-container cursor-pointer transition-colors">
+                            <input type="checkbox"
+                                class="ps-item-{{ group.user.pk }} w-4 h-4 accent-primary cursor-pointer"
+                                value="{{ q.pk }}"
+                                data-amount="{{ q.offer_display }}"
+                                onchange="updatePickupTotal('{{ group.user.pk }}')">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-body font-semibold text-sm text-on-surface leading-snug truncate">{{ q.item_name }}</p>
+                            </div>
+                            <span class="flex-shrink-0 text-sm font-bold text-emerald-700 tabular-nums">{{ q.offer_display }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="px-6 py-4 border-t border-outline-variant/20 bg-surface-container-lowest">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm font-body text-on-surface-variant">Selected total</span>
+                            <span id="ps-total-{{ group.user.pk }}" class="text-lg font-display font-bold text-primary tabular-nums">$0</span>
+                        </div>
+                        <form method="post" action="{% url 'admin_kanban_bulk_pickup' %}" id="ps-form-{{ group.user.pk }}">
+                            {% csrf_token %}
+                            <div id="ps-hidden-{{ group.user.pk }}"></div>
+                            <button type="submit"
+                                class="w-full py-2.5 rounded-full bg-primary text-on-primary font-body font-bold text-sm hover:opacity-90 transition-opacity">
+                                Confirm pickup
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
 
             {# ---- Column 3: Picked Up — grouped by user ---- #}
             <div>
@@ -636,6 +696,33 @@ function toggleUserGroup(id) {
     var isOpen = !panel.classList.contains('hidden');
     panel.classList.toggle('hidden', isOpen);
     if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+function initPickupSession(userId) {
+    document.querySelectorAll('.ps-item-' + userId).forEach(function(cb) {
+        cb.checked = false;
+    });
+    updatePickupTotal(userId);
+}
+function updatePickupTotal(userId) {
+    var total = 0;
+    document.querySelectorAll('.ps-item-' + userId + ':checked').forEach(function(cb) {
+        var raw = (cb.dataset.amount || '').replace(/[^0-9.]/g, '');
+        var v = parseFloat(raw);
+        if (!isNaN(v)) total += v;
+    });
+    var display = total === 0 ? '$0' : (Number.isInteger(total) ? '$' + total.toLocaleString() : '$' + total.toFixed(2));
+    var el = document.getElementById('ps-total-' + userId);
+    if (el) el.textContent = display;
+    var hidden = document.getElementById('ps-hidden-' + userId);
+    if (!hidden) return;
+    hidden.innerHTML = '';
+    document.querySelectorAll('.ps-item-' + userId + ':checked').forEach(function(cb) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'quote_ids';
+        inp.value = cb.value;
+        hidden.appendChild(inp);
+    });
 }
 function loadVideo(quoteId) {
     var btn = document.getElementById('video-btn-' + quoteId);
