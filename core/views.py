@@ -14,7 +14,7 @@ from django.views.decorators.http import require_http_methods
 from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, QuoteVideoForm
 from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini
 from .models import AIQuote
-from .supabase_storage import create_signed_video_url, is_storage_configured, upload_quote_video
+from .supabase_storage import create_presigned_upload_url, create_signed_video_url, is_storage_configured, upload_quote_video
 from .video_utils import file_extension_for_upload, video_mime_type_from_path
 
 logger = logging.getLogger(__name__)
@@ -293,12 +293,6 @@ def admin_accept_quote_view(request, quote_id: int):
         return HttpResponseForbidden('You do not have access to this page.')
 
     quote = get_object_or_404(AIQuote, pk=quote_id)
-    if not quote.has_video:
-        messages.error(
-            request,
-            'This quote has no video yet—ask the user to upload from their quote page.',
-        )
-        return redirect('admin_quotes')
     if quote.quote_accepted_by_admin:
         messages.info(request, 'This offer was already accepted.')
         return redirect('admin_quotes')
@@ -613,13 +607,6 @@ def admin_kanban_approve_view(request, quote_id: int):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden('You do not have access to this page.')
     q = get_object_or_404(AIQuote, pk=quote_id)
-    if not q.has_video:
-        messages.error(
-            request,
-            f'Cannot approve "{
-                q.item_name}" — the user has not uploaded a video yet.',
-        )
-        return redirect('admin_kanban')
     if q.quote_accepted_by_admin:
         messages.info(request, f'"{q.item_name}" is already approved.')
         return redirect('admin_kanban')
@@ -910,3 +897,55 @@ def admin_kanban_take_over_view(request, user_id: int):
     ).update(assigned_admin_name=admin_name)
     messages.success(request, f'@{target_user.username} case taken over by {admin_name} ({updated} item(s) updated).')
     return redirect('admin_kanban')
+
+
+_ALLOWED_VIDEO_EXTENSIONS = frozenset({'.mp4', '.webm', '.mov', '.m4v'})
+
+
+@login_required
+@require_http_methods(['GET'])
+def quote_video_presigned_url_view(request, quote_id: int):
+    """Return a Supabase presigned upload URL for direct browser-to-Supabase upload.
+
+    The browser PUT-s the file directly to Supabase, bypassing Vercel's 4.5 MB body limit.
+    """
+    quote = get_object_or_404(AIQuote, pk=quote_id, user=request.user)
+    if quote.quote_accepted_by_admin:
+        return JsonResponse({'error': 'This offer is already confirmed.'}, status=400)
+    if not is_storage_configured():
+        return JsonResponse({'error': 'Video upload is not configured.'}, status=503)
+    raw_ext = (request.GET.get('ext') or '').strip().lower()
+    if not raw_ext.startswith('.'):
+        raw_ext = f'.{raw_ext}'
+    if raw_ext not in _ALLOWED_VIDEO_EXTENSIONS:
+        raw_ext = '.mp4'
+    object_path = f'{request.user.pk}/quote_{quote.pk}/current{raw_ext}'
+    upload_url = create_presigned_upload_url(object_path)
+    if not upload_url:
+        return JsonResponse({'error': 'Could not create upload URL. Try again.'}, status=503)
+    return JsonResponse({'upload_url': upload_url, 'object_path': object_path})
+
+
+@login_required
+@require_http_methods(['POST'])
+def quote_video_confirm_view(request, quote_id: int):
+    """Confirm a direct Supabase upload and mark the quote as having a video."""
+    import json as _json
+    quote = get_object_or_404(AIQuote, pk=quote_id, user=request.user)
+    if quote.quote_accepted_by_admin:
+        return JsonResponse({'error': 'This offer is already confirmed.'}, status=400)
+    try:
+        body = _json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
+    object_path = (body.get('object_path') or '').strip()
+    expected_prefix = f'{request.user.pk}/quote_{quote.pk}/'
+    if not object_path.startswith(expected_prefix):
+        return JsonResponse({'error': 'Invalid object path.'}, status=400)
+    quote.has_video = True
+    quote.video_path = object_path
+    quote.save(update_fields=['has_video', 'video_path'])
+    return JsonResponse({
+        'ok': True,
+        'message': "Video received. Your offer is pending review—SHARE Bear will confirm once we've watched it.",
+    })

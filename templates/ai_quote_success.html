@@ -97,17 +97,90 @@
                     Video upload is not configured for this environment (missing Supabase storage settings).
                 </p>
                 {% else %}
-                <form method="post" enctype="multipart/form-data" action="{% url 'quote_video_upload' quote_id=quote.pk %}" class="space-y-4">
-                    {% csrf_token %}
+                <div id="video-upload-area" class="space-y-4">
                     <div>
                         <label for="id_video" class="block text-sm font-semibold text-on-surface mb-1.5">Video file</label>
                         <p class="text-xs text-on-surface-variant mb-2">MP4, WebM, or MOV — max about {{ quote_video_max_mb|default:100 }} MB</p>
-                        <input type="file" name="video" id="id_video" accept="video/mp4,video/webm,video/quicktime,video/*" required class="block w-full text-sm text-on-surface file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold" />
+                        <input type="file" id="id_video" accept="video/mp4,video/webm,video/quicktime,video/*" class="block w-full text-sm text-on-surface file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold" />
                     </div>
-                    <button type="submit" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 px-6 py-3 rounded-xl transition-opacity w-full sm:w-auto">
+                    <button id="video-upload-btn" type="button" class="font-display font-bold text-on-secondary-container bg-secondary-container hover:opacity-90 disabled:opacity-40 px-6 py-3 rounded-xl transition-opacity w-full sm:w-auto">
                         Upload video to accept this offer
                     </button>
-                </form>
+                    <p id="video-upload-status" class="text-sm font-body hidden"></p>
+                </div>
+                <script>
+                (function () {
+                    var input = document.getElementById('id_video');
+                    var btn = document.getElementById('video-upload-btn');
+                    var status = document.getElementById('video-upload-status');
+                    var quoteId = {{ quote.pk }};
+                    var maxBytes = {{ quote_video_max_mb|default:100 }} * 1024 * 1024;
+
+                    function getCsrf() {
+                        var m = document.cookie.match(/csrftoken=([^;]+)/);
+                        return m ? m[1] : '';
+                    }
+                    function showStatus(msg, isError) {
+                        status.textContent = msg;
+                        status.className = 'text-sm font-body mt-1 ' + (isError ? 'text-red-700' : 'text-emerald-700');
+                        status.classList.remove('hidden');
+                    }
+
+                    btn.addEventListener('click', async function () {
+                        var file = input.files && input.files[0];
+                        if (!file) { showStatus('Please select a video file first.', true); return; }
+                        if (file.size > maxBytes) {
+                            showStatus('File is too large (max {{ quote_video_max_mb|default:100 }} MB).', true);
+                            return;
+                        }
+                        btn.disabled = true;
+                        showStatus('Uploading…', false);
+                        try {
+                            var ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+                            var urlResp = await fetch(
+                                '/ai-quote/complete/' + quoteId + '/video-upload-url/?ext=' + encodeURIComponent(ext),
+                                { credentials: 'same-origin' }
+                            );
+                            if (!urlResp.ok) {
+                                var err = await urlResp.json().catch(function () { return {}; });
+                                showStatus(err.error || 'Could not start upload. Try again.', true);
+                                btn.disabled = false;
+                                return;
+                            }
+                            var urlData = await urlResp.json();
+                            var uploadResp = await fetch(urlData.upload_url, {
+                                method: 'PUT',
+                                body: file,
+                                headers: { 'Content-Type': file.type || 'video/mp4' },
+                            });
+                            if (!uploadResp.ok) {
+                                showStatus('Upload to storage failed. Try again or use a smaller file.', true);
+                                btn.disabled = false;
+                                return;
+                            }
+                            var confirmResp = await fetch(
+                                '/ai-quote/complete/' + quoteId + '/video-confirm/',
+                                {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                                    body: JSON.stringify({ object_path: urlData.object_path }),
+                                }
+                            );
+                            if (!confirmResp.ok) {
+                                showStatus('Video uploaded but account update failed—contact support.', true);
+                                btn.disabled = false;
+                                return;
+                            }
+                            showStatus("Video received. Your offer is pending review—SHARE Bear will confirm once we've watched it.", false);
+                            input.disabled = true;
+                        } catch (e) {
+                            showStatus('Upload failed: ' + (e.message || 'unknown error. Try again.'), true);
+                            btn.disabled = false;
+                        }
+                    });
+                })();
+                </script>
                 {% endif %}
                 {% endif %}
                 {% endif %}

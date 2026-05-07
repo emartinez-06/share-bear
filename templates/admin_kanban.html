@@ -343,9 +343,18 @@
             </button>
         </form>
         {% else %}
-        <div class="w-full rounded-xl bg-surface-container px-5 py-3 text-sm text-on-surface-variant font-body text-center border border-outline-variant/30 mb-4">
-            <span class="material-symbols-outlined text-base align-middle mr-1">upload</span>
-            Awaiting video upload before approval
+        <div class="flex gap-2 mb-4 items-stretch">
+            <div class="flex-1 rounded-xl bg-surface-container px-4 py-3 text-sm text-on-surface-variant font-body border border-outline-variant/30 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base flex-shrink-0">upload</span>
+                <span>Awaiting video upload</span>
+            </div>
+            <form method="post" action="{% url 'admin_kanban_approve' quote_id=q.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="final_offer" value="">
+                <button type="submit" class="h-full font-semibold font-body text-sm text-on-surface border border-outline-variant/50 px-4 rounded-xl hover:bg-surface-container transition-colors whitespace-nowrap">
+                    Approve without video
+                </button>
+            </form>
         </div>
         {% if q.video_reminder_mailto_url %}
         {% if q.assigned_admin_name %}

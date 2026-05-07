@@ -1237,3 +1237,200 @@ class GroupEmailSubjectAdminTests(TestCase):
         decoded = unquote(url or '')
         self.assertIn('subject=Action needed: upload video(s) for your SHARE Bear items — Erick', decoded)
         self.assertNotIn('SHARE Bear Admin Team (Erick)', decoded)
+
+
+# ---------------------------------------------------------------------------
+# Approve items without video feature
+# ---------------------------------------------------------------------------
+
+class AdminApproveWithoutVideoTests(TestCase):
+    """Admin can approve items that don't have a video uploaded."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.staff = User.objects.create_user('novid_staff', 'ns@test.example', 'pw', is_staff=True)
+        cls.seller = User.objects.create_user('novid_seller', 'ss@test.example', 'pw2')
+        cls.quote_no_video = AIQuote.objects.create(
+            user=cls.seller,
+            item_name='Old Laptop',
+            description='d',
+            quote_text='- SHARE Bear offer (USD): $50\n',
+            has_video=False,
+            assigned_admin_name='TestAdmin',
+        )
+
+    def test_kanban_approve_without_video_succeeds(self):
+        self.client.login(username='novid_staff', password='pw')
+        r = self.client.post(
+            f'/admin-dashboard/approve/{self.quote_no_video.pk}/',
+            {'final_offer': '50'},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.quote_no_video.refresh_from_db()
+        self.assertTrue(self.quote_no_video.quote_accepted_by_admin)
+
+    def test_admin_accept_quote_without_video_succeeds(self):
+        self.client.login(username='novid_staff', password='pw')
+        r = self.client.post(
+            f'/admin-quotes/accept/{self.quote_no_video.pk}/',
+            {'final_offer': '50'},
+        )
+        self.assertEqual(r.status_code, 302)
+        self.quote_no_video.refresh_from_db()
+        self.assertTrue(self.quote_no_video.quote_accepted_by_admin)
+
+
+# ---------------------------------------------------------------------------
+# Direct video upload (bypass Vercel 4.5 MB payload limit)
+# ---------------------------------------------------------------------------
+
+class QuoteVideoPresignedUrlViewTests(TestCase):
+    """GET endpoint returns a Supabase presigned upload URL for direct browser upload."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user('presign_user', 'pu@test.example', 'pw')
+        cls.other = User.objects.create_user('presign_other', 'po@test.example', 'pw')
+        cls.quote = AIQuote.objects.create(
+            user=cls.user,
+            item_name='Camera',
+            description='d',
+            quote_text='- SHARE Bear offer (USD): $100\n',
+        )
+        cls.accepted_quote = AIQuote.objects.create(
+            user=cls.user,
+            item_name='Camera accepted',
+            description='d',
+            quote_text='$100',
+            quote_accepted_by_admin=True,
+        )
+
+    def test_returns_upload_url_for_authenticated_user(self):
+        self.client.login(username='presign_user', password='pw')
+        with patch('core.views.create_presigned_upload_url', return_value='https://sb.example/upload?token=abc'):
+            with patch('core.views.is_storage_configured', return_value=True):
+                r = self.client.get(
+                    f'/ai-quote/complete/{self.quote.pk}/video-upload-url/?ext=mp4'
+                )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn('upload_url', data)
+        self.assertIn('object_path', data)
+        self.assertIn('.mp4', data['object_path'])
+
+    def test_requires_authentication(self):
+        r = self.client.get(f'/ai-quote/complete/{self.quote.pk}/video-upload-url/')
+        self.assertEqual(r.status_code, 302)
+
+    def test_rejects_already_accepted_quote(self):
+        self.client.login(username='presign_user', password='pw')
+        with patch('core.views.is_storage_configured', return_value=True):
+            r = self.client.get(
+                f'/ai-quote/complete/{self.accepted_quote.pk}/video-upload-url/'
+            )
+        self.assertEqual(r.status_code, 400)
+
+    def test_rejects_other_users_quote(self):
+        self.client.login(username='presign_other', password='pw')
+        r = self.client.get(f'/ai-quote/complete/{self.quote.pk}/video-upload-url/')
+        self.assertEqual(r.status_code, 404)
+
+    def test_storage_not_configured_returns_503(self):
+        self.client.login(username='presign_user', password='pw')
+        with patch('core.views.is_storage_configured', return_value=False):
+            r = self.client.get(f'/ai-quote/complete/{self.quote.pk}/video-upload-url/')
+        self.assertEqual(r.status_code, 503)
+
+    def test_unknown_extension_defaults_to_mp4(self):
+        self.client.login(username='presign_user', password='pw')
+        with patch('core.views.create_presigned_upload_url', return_value='https://sb.example/upload?token=abc'):
+            with patch('core.views.is_storage_configured', return_value=True):
+                r = self.client.get(
+                    f'/ai-quote/complete/{self.quote.pk}/video-upload-url/?ext=exe'
+                )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('.mp4', r.json()['object_path'])
+
+
+class QuoteVideoConfirmViewTests(TestCase):
+    """POST endpoint confirms a direct Supabase upload and marks has_video=True."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user('confirm_user', 'cu@test.example', 'pw')
+        cls.other = User.objects.create_user('confirm_other', 'co@test.example', 'pw2')
+
+    def setUp(self):
+        self.quote = AIQuote.objects.create(
+            user=self.user,
+            item_name='Tablet',
+            description='d',
+            quote_text='$200',
+        )
+
+    def _valid_path(self):
+        return f'{self.user.pk}/quote_{self.quote.pk}/current.mp4'
+
+    def test_confirm_sets_has_video_and_video_path(self):
+        import json
+        self.client.login(username='confirm_user', password='pw')
+        r = self.client.post(
+            f'/ai-quote/complete/{self.quote.pk}/video-confirm/',
+            json.dumps({'object_path': self._valid_path()}),
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.quote.refresh_from_db()
+        self.assertTrue(self.quote.has_video)
+        self.assertEqual(self.quote.video_path, self._valid_path())
+
+    def test_requires_authentication(self):
+        import json
+        r = self.client.post(
+            f'/ai-quote/complete/{self.quote.pk}/video-confirm/',
+            json.dumps({'object_path': self._valid_path()}),
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 302)
+
+    def test_rejects_path_not_belonging_to_user_quote(self):
+        import json
+        self.client.login(username='confirm_user', password='pw')
+        r = self.client.post(
+            f'/ai-quote/complete/{self.quote.pk}/video-confirm/',
+            json.dumps({'object_path': '999/quote_999/current.mp4'}),
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 400)
+        self.quote.refresh_from_db()
+        self.assertFalse(self.quote.has_video)
+
+    def test_rejects_other_users_quote_with_404(self):
+        import json
+        other_quote = AIQuote.objects.create(
+            user=self.other, item_name='Phone', description='d', quote_text='$50',
+        )
+        self.client.login(username='confirm_user', password='pw')
+        r = self.client.post(
+            f'/ai-quote/complete/{other_quote.pk}/video-confirm/',
+            json.dumps({'object_path': f'{self.other.pk}/quote_{other_quote.pk}/current.mp4'}),
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 404)
+        other_quote.refresh_from_db()
+        self.assertFalse(other_quote.has_video)
+
+    def test_rejects_already_accepted_quote(self):
+        import json
+        self.quote.quote_accepted_by_admin = True
+        self.quote.save(update_fields=['quote_accepted_by_admin'])
+        self.client.login(username='confirm_user', password='pw')
+        r = self.client.post(
+            f'/ai-quote/complete/{self.quote.pk}/video-confirm/',
+            json.dumps({'object_path': self._valid_path()}),
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 400)
