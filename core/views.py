@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, QuoteVideoForm
-from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini
+from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini, parse_offer_amount
 from .models import AIQuote
 from .supabase_storage import create_presigned_upload_url, create_signed_video_url, is_storage_configured, upload_quote_video
 from .video_utils import file_extension_for_upload, video_mime_type_from_path
@@ -517,19 +517,40 @@ def admin_kanban_view(request):
         q.approval_mailto_url = None
         q.pickup_location_mailto_url = None
         q.video_reminder_mailto_url = None
+        q.offer_numeric = parse_offer_amount(q.offer_display) or 0
         if q.picked_up:
+            q.status_key = 'picked_up'
+            q.status_label = 'Picked Up'
             picked_up_list.append(q)
         elif q.quote_accepted_by_admin:
+            q.status_key = 'approved'
+            q.status_label = 'Approved'
             q.approval_mailto_url = build_approval_mailto_url(q)
             q.pickup_location_mailto_url = build_pickup_location_mailto_url(q)
             approved.append(q)
         elif q.denied:
+            q.status_key = 'denied'
+            q.status_label = 'Denied'
             denied_list.append(q)
         else:
+            q.status_key = 'awaiting'
+            q.status_label = 'Awaiting'
             if not q.has_video:
                 q.video_reminder_mailto_url = build_video_reminder_mailto_url(
                     q)
             awaiting.append(q)
+
+    filter_makes = sorted({(q.make or '').strip()
+                           for q in all_quotes if (q.make or '').strip()})
+    filter_admins = sorted({_normalized_admin_name(q.assigned_admin_name)
+                            for q in all_quotes if _normalized_admin_name(q.assigned_admin_name)})
+    seen_users: dict[int, object] = {}
+    for q in all_quotes:
+        seen_users.setdefault(q.user_id, q.user)
+    filter_users = sorted(
+        seen_users.values(),
+        key=lambda u: (u.first_name or u.username).lower(),
+    )
 
     def _group_by_user(items: list) -> list[dict]:
         groups: dict[int, dict] = {}
@@ -547,11 +568,19 @@ def admin_kanban_view(request):
             admins_sorted = sorted(g['admins'])
             total = format_offers_total([q.offer_display for q in g['items']])
             assigned_admin = admins_sorted[0] if admins_sorted else ''
+            makes = sorted({(q.make or '').strip().lower()
+                            for q in g['items'] if (q.make or '').strip()})
+            prices = [q.offer_numeric for q in g['items']]
             result.append({
                 **g,
                 'admins': admins_sorted,
                 'total_display': total,
                 'assigned_admin': assigned_admin,
+                'filter_makes_attr': ' '.join(makes),
+                'filter_admins_attr': ' '.join(a.lower() for a in admins_sorted),
+                'filter_has_video': any(q.has_video for q in g['items']),
+                'filter_price_min': min(prices, default=0),
+                'filter_price_max': max(prices, default=0),
             })
         return result
 
@@ -595,6 +624,10 @@ def admin_kanban_view(request):
             'picked_up_by_user': _group_by_user(picked_up_list),
             'denied': denied_list,
             'denied_by_user': _group_by_user(denied_list),
+            'all_quotes_for_list': all_quotes,
+            'filter_makes': filter_makes,
+            'filter_admins': filter_admins,
+            'filter_users': filter_users,
             'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
         },
     )

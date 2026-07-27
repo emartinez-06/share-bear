@@ -34,7 +34,7 @@
         </div>
     </header>
 
-    <main class="pt-28 pb-20 px-6 max-w-[1440px] mx-auto">
+    <main class="pt-28 pb-20 px-6 max-w-[1600px] mx-auto">
 
         {% for message in messages %}
         <div class="mb-4 rounded-lg px-4 py-3 text-sm font-body border {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-900{% else %}border-emerald-200 bg-emerald-50 text-emerald-900{% endif %}" role="alert">
@@ -42,15 +42,110 @@
         </div>
         {% endfor %}
 
-        <section class="mb-8">
+        <section class="mb-6">
             <h1 class="font-display font-bold text-3xl text-primary tracking-tightest">Admin Dashboard</h1>
             <p class="text-on-surface-variant text-sm mt-1 font-body">Track submitted items across the full buy-back pipeline.</p>
         </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+            {# ================= Filter sidebar ================= #}
+            <aside class="w-full lg:w-72 flex-shrink-0 lg:sticky lg:top-28 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-display font-bold text-sm text-on-surface tracking-tight">Filters</h2>
+                    <button type="button" id="reset-filters-btn" class="text-xs font-semibold font-body text-primary hover:underline">Reset</button>
+                </div>
+
+                <div class="space-y-5 text-sm font-body">
+                    {# Status #}
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">Status</p>
+                        <div class="space-y-1.5">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="filter-status accent-primary w-3.5 h-3.5" value="awaiting" checked> <span class="w-2 h-2 rounded-full bg-amber-400"></span> Awaiting</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="filter-status accent-primary w-3.5 h-3.5" value="approved" checked> <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Approved</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="filter-status accent-primary w-3.5 h-3.5" value="picked_up" checked> <span class="w-2 h-2 rounded-full bg-primary"></span> Picked Up</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="filter-status accent-primary w-3.5 h-3.5" value="denied" checked> <span class="w-2 h-2 rounded-full bg-red-400"></span> Denied</label>
+                        </div>
+                    </div>
+
+                    {# User #}
+                    <div>
+                        <label for="filter-user" class="block text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">User</label>
+                        <select id="filter-user" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            <option value="">All users</option>
+                            {% for u in filter_users %}
+                            <option value="{{ u.pk }}">{% if u.first_name %}{{ u.first_name }} {{ u.last_name }}{% else %}@{{ u.username }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# Make (classification) #}
+                    <div>
+                        <label for="filter-make" class="block text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">Make</label>
+                        <select id="filter-make" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            <option value="">All makes</option>
+                            {% for m in filter_makes %}
+                            <option value="{{ m|lower }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# Video #}
+                    <div>
+                        <label for="filter-video" class="block text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">Video</label>
+                        <select id="filter-video" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            <option value="">Any</option>
+                            <option value="yes">Has video</option>
+                            <option value="no">No video</option>
+                        </select>
+                    </div>
+
+                    {# Assigned admin #}
+                    <div>
+                        <label for="filter-admin" class="block text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">Assigned admin</label>
+                        <select id="filter-admin" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            <option value="">All admins</option>
+                            <option value="__unassigned__">Unassigned</option>
+                            {% for a in filter_admins %}
+                            <option value="{{ a|lower }}">{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# Offer amount range #}
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-2">Offer amount</p>
+                        <div class="flex items-center gap-2">
+                            <input id="filter-price-min" type="number" min="0" step="1" placeholder="Min" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                            <span class="text-on-surface-variant">–</span>
+                            <input id="filter-price-max" type="number" min="0" step="1" placeholder="Max" class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2.5 py-2 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-outline-variant/20">
+                    <p class="text-xs text-on-surface-variant font-body">Showing <span id="filter-count" class="font-bold text-on-surface">0</span> of <span id="filter-total">0</span> items</p>
+                </div>
+            </aside>
+
+            {# ================= Main content ================= #}
+            <div class="flex-1 min-w-0 w-full">
+
+                <div class="flex items-center justify-end mb-4">
+                    <div class="inline-flex rounded-full border border-outline-variant/40 bg-surface-container-lowest p-1" role="group" aria-label="View mode">
+                        <button type="button" id="view-grid-btn" class="view-toggle-btn inline-flex items-center gap-1.5 text-xs font-semibold font-body px-3 py-1.5 rounded-full transition-colors" data-view="grid">
+                            <span class="material-symbols-outlined text-base">grid_view</span> Grid
+                        </button>
+                        <button type="button" id="view-list-btn" class="view-toggle-btn inline-flex items-center gap-1.5 text-xs font-semibold font-body px-3 py-1.5 rounded-full transition-colors" data-view="list">
+                            <span class="material-symbols-outlined text-base">table_rows</span> List
+                        </button>
+                    </div>
+                </div>
+
+        <div id="grid-view" class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
 
             {# ---- Column 1: Awaiting — grouped by user ---- #}
-            <div>
+            <div class="status-column" data-status="awaiting">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
                     <h2 class="font-display font-bold text-base text-on-surface tracking-tight">Awaiting</h2>
@@ -58,7 +153,10 @@
                 </div>
                 <div class="space-y-3">
                     {% for group in awaiting_by_user %}
-                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                    <div class="quote-group-card bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden"
+                         data-status="awaiting" data-user-id="{{ group.user.pk }}" data-makes="{{ group.filter_makes_attr }}"
+                         data-admins="{{ group.filter_admins_attr }}" data-has-video="{{ group.filter_has_video|yesno:'yes,no' }}"
+                         data-price-min="{{ group.filter_price_min }}" data-price-max="{{ group.filter_price_max }}">
                         {# User card header — click to expand/collapse #}
                         <button type="button" onclick="toggleUserGroup('ug-{{ group.user.pk }}')"
                             class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
@@ -130,7 +228,7 @@
             </div>
 
             {# ---- Column 2: Approved — grouped by user ---- #}
-            <div>
+            <div class="status-column" data-status="approved">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
                     <h2 class="font-display font-bold text-base text-on-surface tracking-tight">Approved</h2>
@@ -138,7 +236,10 @@
                 </div>
                 <div class="space-y-3">
                     {% for group in approved_by_user %}
-                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                    <div class="quote-group-card bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden"
+                         data-status="approved" data-user-id="{{ group.user.pk }}" data-makes="{{ group.filter_makes_attr }}"
+                         data-admins="{{ group.filter_admins_attr }}" data-has-video="{{ group.filter_has_video|yesno:'yes,no' }}"
+                         data-price-min="{{ group.filter_price_min }}" data-price-max="{{ group.filter_price_max }}">
                         <button type="button" onclick="toggleUserGroup('appr-{{ group.user.pk }}')"
                             class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -254,7 +355,7 @@
             {% endfor %}
 
             {# ---- Column 3: Picked Up — grouped by user ---- #}
-            <div>
+            <div class="status-column" data-status="picked_up">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0"></span>
                     <h2 class="font-display font-bold text-base text-on-surface tracking-tight">Picked Up</h2>
@@ -262,7 +363,10 @@
                 </div>
                 <div class="space-y-3">
                     {% for group in picked_up_by_user %}
-                    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden">
+                    <div class="quote-group-card bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden"
+                         data-status="picked_up" data-user-id="{{ group.user.pk }}" data-makes="{{ group.filter_makes_attr }}"
+                         data-admins="{{ group.filter_admins_attr }}" data-has-video="{{ group.filter_has_video|yesno:'yes,no' }}"
+                         data-price-min="{{ group.filter_price_min }}" data-price-max="{{ group.filter_price_max }}">
                         <button type="button" onclick="toggleUserGroup('pckup-{{ group.user.pk }}')"
                             class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -299,7 +403,7 @@
             </div>
 
             {# ---- Column 4: Denied — grouped by user ---- #}
-            <div>
+            <div class="status-column" data-status="denied">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0"></span>
                     <h2 class="font-display font-bold text-base text-on-surface tracking-tight">Denied</h2>
@@ -307,7 +411,10 @@
                 </div>
                 <div class="space-y-3">
                     {% for group in denied_by_user %}
-                    <div class="bg-surface-container-lowest rounded-xl border border-red-200/60 overflow-hidden">
+                    <div class="quote-group-card bg-surface-container-lowest rounded-xl border border-red-200/60 overflow-hidden"
+                         data-status="denied" data-user-id="{{ group.user.pk }}" data-makes="{{ group.filter_makes_attr }}"
+                         data-admins="{{ group.filter_admins_attr }}" data-has-video="{{ group.filter_has_video|yesno:'yes,no' }}"
+                         data-price-min="{{ group.filter_price_min }}" data-price-max="{{ group.filter_price_max }}">
                         <button type="button" onclick="toggleUserGroup('deny-{{ group.user.pk }}')"
                             class="w-full text-left px-4 py-3 hover:bg-red-50 transition-colors group flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -337,7 +444,63 @@
                 </div>
             </div>
 
-        </div>
+        </div>{# /#grid-view #}
+
+        {# ---- List view — flat, sortable, excel-style table of every item ---- #}
+        <div id="list-view" class="hidden bg-surface-container-lowest rounded-2xl border border-outline-variant/30 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm font-body border-collapse">
+                    <thead>
+                        <tr class="bg-surface-container text-left text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="item">Item</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="user">User</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="status">Status</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="make">Make / Model</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="video">Video</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap text-right" data-sort="price">Offer</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="admin">Admin</th>
+                            <th class="px-4 py-3 cursor-pointer select-none whitespace-nowrap" data-sort="date">Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-view-body" class="divide-y divide-outline-variant/15">
+                        {% for q in all_quotes_for_list %}
+                        <tr class="quote-row hover:bg-surface-container cursor-pointer transition-colors"
+                            data-status="{{ q.status_key }}"
+                            data-user-id="{{ q.user.pk }}"
+                            data-make="{{ q.make|default:''|lower }}"
+                            data-video="{{ q.has_video|yesno:'yes,no' }}"
+                            data-admin="{{ q.assigned_admin_name|default:''|lower }}"
+                            data-price="{{ q.offer_numeric }}"
+                            data-item="{{ q.item_name|lower }}"
+                            data-user-label="{% if q.user.first_name %}{{ q.user.first_name }} {{ q.user.last_name }}{% else %}{{ q.user.username }}{% endif %}"
+                            data-date="{{ q.created_at|date:'U' }}"
+                            onclick="openModal('modal-{{ q.pk }}')">
+                            <td class="px-4 py-3 font-semibold text-on-surface whitespace-nowrap max-w-[220px] truncate">{{ q.item_name }}</td>
+                            <td class="px-4 py-3 text-on-surface-variant whitespace-nowrap">{% if q.user.first_name %}{{ q.user.first_name }} {{ q.user.last_name }}{% else %}@{{ q.user.username }}{% endif %}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
+                                    {% if q.status_key == 'awaiting' %}bg-amber-50 text-amber-800 border border-amber-200
+                                    {% elif q.status_key == 'approved' %}bg-emerald-50 text-emerald-800 border border-emerald-200
+                                    {% elif q.status_key == 'picked_up' %}bg-primary/10 text-primary border border-primary/20
+                                    {% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">{{ q.status_label }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-on-surface-variant whitespace-nowrap">{% if q.unknown_make_model %}Unknown{% else %}{{ q.make|default:"—" }}{% if q.model %} / {{ q.model }}{% endif %}{% endif %}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">{% if q.has_video %}<span class="material-symbols-outlined text-primary text-base align-middle">check_circle</span>{% else %}<span class="text-on-surface-variant text-xs">—</span>{% endif %}</td>
+                            <td class="px-4 py-3 font-bold text-on-surface text-right tabular-nums whitespace-nowrap">{{ q.offer_display }}</td>
+                            <td class="px-4 py-3 text-on-surface-variant whitespace-nowrap">{{ q.assigned_admin_name|default:"—" }}</td>
+                            <td class="px-4 py-3 text-on-surface-variant whitespace-nowrap">{{ q.created_at|date:"M j, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="px-4 py-8 text-center text-on-surface-variant">No items yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>{# /#list-view #}
+
+            </div>{# /main content #}
+        </div>{# /sidebar+content wrapper #}
+
     </main>
 </div>
 
@@ -752,6 +915,167 @@ function loadVideo(quoteId) {
             if (btn) { btn.textContent = 'Retry'; btn.disabled = false; }
         });
 }
+
+(function () {
+    var statusCheckboxes = document.querySelectorAll('.filter-status');
+    var userSelect = document.getElementById('filter-user');
+    var makeSelect = document.getElementById('filter-make');
+    var videoSelect = document.getElementById('filter-video');
+    var adminSelect = document.getElementById('filter-admin');
+    var priceMinInput = document.getElementById('filter-price-min');
+    var priceMaxInput = document.getElementById('filter-price-max');
+    var countEl = document.getElementById('filter-count');
+    var totalEl = document.getElementById('filter-total');
+    var resetBtn = document.getElementById('reset-filters-btn');
+
+    function activeStatuses() {
+        var set = {};
+        statusCheckboxes.forEach(function (cb) { if (cb.checked) set[cb.value] = true; });
+        return set;
+    }
+
+    function readFilters() {
+        return {
+            userId: userSelect.value,
+            make: makeSelect.value,
+            video: videoSelect.value,
+            admin: adminSelect.value,
+            priceMin: priceMinInput.value !== '' ? parseFloat(priceMinInput.value) : null,
+            priceMax: priceMaxInput.value !== '' ? parseFloat(priceMaxInput.value) : null,
+        };
+    }
+
+    // Shared match logic. For grid group-cards, makes/admins are space-separated
+    // aggregates across every item in the group and price is that group's
+    // [min, max] range — a group matches if it plausibly contains a matching
+    // item. The list view checks each item individually, so it's exact.
+    function matches(status, userId, makes, hasVideo, admins, priceMin, priceMax, statuses, f) {
+        if (!statuses[status]) return false;
+        if (f.userId && String(userId) !== f.userId) return false;
+        if (f.make && (' ' + makes + ' ').indexOf(' ' + f.make + ' ') === -1) return false;
+        if (f.video === 'yes' && !hasVideo) return false;
+        if (f.video === 'no' && hasVideo) return false;
+        if (f.admin) {
+            if (f.admin === '__unassigned__') {
+                if (admins) return false;
+            } else if ((' ' + admins + ' ').indexOf(' ' + f.admin + ' ') === -1) {
+                return false;
+            }
+        }
+        if (f.priceMin !== null && priceMax < f.priceMin) return false;
+        if (f.priceMax !== null && priceMin > f.priceMax) return false;
+        return true;
+    }
+
+    function applyFilters() {
+        var statuses = activeStatuses();
+        var f = readFilters();
+
+        document.querySelectorAll('.status-column').forEach(function (col) {
+            col.classList.toggle('hidden', !statuses[col.dataset.status]);
+        });
+
+        document.querySelectorAll('.quote-group-card').forEach(function (card) {
+            var ok = matches(
+                card.dataset.status, card.dataset.userId, card.dataset.makes,
+                card.dataset.hasVideo === 'yes', card.dataset.admins,
+                parseFloat(card.dataset.priceMin), parseFloat(card.dataset.priceMax),
+                statuses, f
+            );
+            card.classList.toggle('hidden', !ok);
+        });
+
+        var visible = 0, total = 0;
+        document.querySelectorAll('.quote-row').forEach(function (row) {
+            total++;
+            var price = parseFloat(row.dataset.price);
+            var ok = matches(
+                row.dataset.status, row.dataset.userId, row.dataset.make,
+                row.dataset.video === 'yes', row.dataset.admin,
+                price, price,
+                statuses, f
+            );
+            row.classList.toggle('hidden', !ok);
+            if (ok) visible++;
+        });
+
+        if (countEl) countEl.textContent = visible;
+        if (totalEl) totalEl.textContent = total;
+    }
+
+    statusCheckboxes.forEach(function (el) { el.addEventListener('change', applyFilters); });
+    [userSelect, makeSelect, videoSelect, adminSelect].forEach(function (el) {
+        if (el) el.addEventListener('change', applyFilters);
+    });
+    [priceMinInput, priceMaxInput].forEach(function (el) {
+        if (el) el.addEventListener('input', applyFilters);
+    });
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            statusCheckboxes.forEach(function (cb) { cb.checked = true; });
+            userSelect.value = '';
+            makeSelect.value = '';
+            videoSelect.value = '';
+            adminSelect.value = '';
+            priceMinInput.value = '';
+            priceMaxInput.value = '';
+            applyFilters();
+        });
+    }
+
+    applyFilters();
+
+    // ---- Grid / List view toggle (persisted per-browser) ----
+    var gridView = document.getElementById('grid-view');
+    var listView = document.getElementById('list-view');
+    var viewBtns = document.querySelectorAll('.view-toggle-btn');
+
+    function setView(view) {
+        gridView.classList.toggle('hidden', view !== 'grid');
+        listView.classList.toggle('hidden', view !== 'list');
+        viewBtns.forEach(function (btn) {
+            var active = btn.dataset.view === view;
+            btn.classList.toggle('bg-primary', active);
+            btn.classList.toggle('text-on-primary', active);
+            btn.classList.toggle('text-on-surface-variant', !active);
+        });
+        try { localStorage.setItem('adminDashboardView', view); } catch (e) {}
+    }
+
+    viewBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () { setView(btn.dataset.view); });
+    });
+
+    var savedView = 'grid';
+    try { savedView = localStorage.getItem('adminDashboardView') || 'grid'; } catch (e) {}
+    setView(savedView);
+
+    // ---- List view column sorting ----
+    var listBody = document.getElementById('list-view-body');
+    var sortState = { key: null, dir: 1 };
+    var sortAttrByKey = {
+        item: 'item', user: 'userLabel', status: 'status', make: 'make',
+        video: 'video', price: 'price', admin: 'admin', date: 'date'
+    };
+    document.querySelectorAll('#list-view th[data-sort]').forEach(function (th) {
+        th.addEventListener('click', function () {
+            var key = th.dataset.sort;
+            sortState.dir = sortState.key === key ? -sortState.dir : 1;
+            sortState.key = key;
+            var attr = sortAttrByKey[key];
+            var rows = Array.prototype.slice.call(listBody.querySelectorAll('.quote-row'));
+            rows.sort(function (a, b) {
+                var av = a.dataset[attr] || '';
+                var bv = b.dataset[attr] || '';
+                if (key === 'price' || key === 'date') {
+                    return ((parseFloat(av) || 0) - (parseFloat(bv) || 0)) * sortState.dir;
+                }
+                return av.localeCompare(bv) * sortState.dir;
+            });
+            rows.forEach(function (row) { listBody.appendChild(row); });
+        });
+    });
+})();
 </script>
 
 {% if vercel_analytics_enabled %}
