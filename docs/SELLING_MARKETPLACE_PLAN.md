@@ -97,7 +97,7 @@ Marketing/nav:
 Updated as each increment lands; git history has the full detail, this is just the checklist view against section 6's roadmap.
 
 ### Phase 0 - Foundations
-- [x] `Listing` / `ListingImage` models + migration (`core/migrations/0010_listing_listingimage.py`). Migration generated; applying to production was handed to Erick to run directly (`python3 manage.py migrate core 0010`) since Claude Code's own safety classifier blocks schema-changing Bash commands here.
+- [x] `Listing` / `ListingImage` models + migration (`core/migrations/0010_listing_listingimage.py`). Applied to production by Erick (`python3 manage.py migrate core 0010`) since Claude Code's own safety classifier blocks schema-changing Bash commands here. Verified via Supabase: `core_listing` and `core_listingimage` both exist, 0 rows.
 - [x] Basic Django-admin registration (`/admin/`) for `Listing`/`ListingImage`, for visibility while the custom admin UI is pending.
 - [x] `core/supabase_storage.py` generalized (bucket-parameterized internals) + `upload_listing_image` / `listing_image_public_url` added. Existing quote-video call sites untouched. Uses a server-side multipart upload (not presigned direct-to-client like video) since admin-uploaded listing photos are small and don't need to bypass Vercel's function payload path.
 - [x] `listing-images` Supabase bucket created in production (public, unlike the private `quote-videos` bucket; 10 MB file size limit; JPEG/PNG/WebP only). Created via the Supabase MCP with Erick's go-ahead; `get_advisors` showed no new security findings afterward.
