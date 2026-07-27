@@ -171,7 +171,7 @@ def listing_image_upload_error(f, max_bytes: int | None = None) -> str | None:
     form and a multi-file upload loop, since Django's FileField doesn't
     natively support multiple files without a custom field.
     """
-    max_bytes = max_bytes or getattr(settings, 'LISTING_IMAGE_MAX_BYTES', 10 * 1024 * 1024)
+    max_bytes = max_bytes or getattr(settings, 'LISTING_IMAGE_MAX_BYTES', 20 * 1024 * 1024)
     name = (getattr(f, 'name', '') or 'file').strip()
     if f.size > max_bytes:
         mb = max_bytes // (1024 * 1024)

@@ -220,7 +220,7 @@ SUPABASE_QUOTE_VIDEOS_BUCKET = os.environ.get('SUPABASE_QUOTE_VIDEOS_BUCKET', 'q
 # Create bucket `listing-images` (public) in the Supabase dashboard.
 SUPABASE_LISTING_IMAGES_BUCKET = os.environ.get('SUPABASE_LISTING_IMAGES_BUCKET', 'listing-images')
 # Matches the bucket's own file_size_limit (set when the bucket was created).
-LISTING_IMAGE_MAX_BYTES = int(os.environ.get('LISTING_IMAGE_MAX_BYTES', str(10 * 1024 * 1024)))
+LISTING_IMAGE_MAX_BYTES = int(os.environ.get('LISTING_IMAGE_MAX_BYTES', str(20 * 1024 * 1024)))
 
 # Google Calendar (pickup: preset weekly slots in app, events.insert on book; service account)
 # Share the destination calendar with the service account; enable Calendar API in GCP.
