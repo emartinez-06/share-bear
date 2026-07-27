@@ -36,6 +36,13 @@
         {% for message in messages %}
         <div class="mb-4 rounded-lg px-4 py-3 text-sm font-body border {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-900{% else %}border-emerald-200 bg-emerald-50 text-emerald-900{% endif %}" role="alert">{{ message }}</div>
         {% endfor %}
+
+        <nav class="flex gap-5 mb-6 text-sm font-body font-semibold border-b border-outline-variant/20 pb-3">
+            <a href="{% url 'admin_kanban' %}" class="text-on-surface-variant hover:text-primary transition-colors">Buy-back board</a>
+            <a href="{% url 'admin_quotes' %}" class="text-primary">AI quotes</a>
+            <a href="{% url 'admin_listings' %}" class="text-on-surface-variant hover:text-primary transition-colors">Listings</a>
+        </nav>
+
         <section class="fade-up">
             <div class="mb-6">
                 <h1 class="font-display font-bold text-3xl text-primary tracking-tightest">AI Quotes Processed</h1>

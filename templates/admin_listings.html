@@ -1,0 +1,143 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}Listings | SHARE Bear{% endblock %}
+
+{% block body %}
+<div class="min-h-screen">
+    <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+        <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-8">
+                <a href="{% url 'home' %}" class="flex items-center gap-3">
+                    <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+                </a>
+                <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1" href="{% url 'admin_kanban' %}">Admin Panel</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                    <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+                </a>
+                <form method="post" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Log out</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-28 pb-20 px-6 max-w-[1440px] mx-auto">
+        {% for message in messages %}
+        <div class="mb-4 rounded-lg px-4 py-3 text-sm font-body border {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-900{% else %}border-emerald-200 bg-emerald-50 text-emerald-900{% endif %}" role="alert">{{ message }}</div>
+        {% endfor %}
+
+        {# ---- Admin tool sub-nav ---- #}
+        <nav class="flex gap-5 mb-6 text-sm font-body font-semibold border-b border-outline-variant/20 pb-3">
+            <a href="{% url 'admin_kanban' %}" class="text-on-surface-variant hover:text-primary transition-colors">Buy-back board</a>
+            <a href="{% url 'admin_quotes' %}" class="text-on-surface-variant hover:text-primary transition-colors">AI quotes</a>
+            <a href="{% url 'admin_listings' %}" class="text-primary">Listings</a>
+        </nav>
+
+        <section class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h1 class="font-display font-bold text-3xl text-primary tracking-tightest">Listings</h1>
+                <p class="text-on-surface-variant text-sm mt-1 font-body">Manage what's for sale in the marketplace.</p>
+            </div>
+            <a href="{% url 'admin_listing_create' %}" class="inline-flex items-center gap-1.5 font-display font-bold text-sm text-on-primary bg-primary px-4 py-2.5 rounded-full hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-base">add</span> New listing
+            </a>
+        </section>
+
+        {# ---- Status filter tabs ---- #}
+        <div class="flex flex-wrap gap-2 mb-6">
+            <a href="{% url 'admin_listings' %}" class="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full border transition-colors {% if not status_filter %}bg-primary text-on-primary border-primary{% else %}text-on-surface-variant border-outline-variant/40 hover:bg-surface-container{% endif %}">All ({{ total_count }})</a>
+            {% for key, label, count in status_tabs %}
+            <a href="{% url 'admin_listings' %}?status={{ key }}" class="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full border transition-colors {% if status_filter == key %}bg-primary text-on-primary border-primary{% else %}text-on-surface-variant border-outline-variant/40 hover:bg-surface-container{% endif %}">{{ label }} ({{ count }})</a>
+            {% endfor %}
+        </div>
+
+        {# ---- Listings table ---- #}
+        <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden mb-10">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[900px]">
+                    <thead class="bg-surface-container">
+                        <tr>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Photo</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Title</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Category</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Price</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Qty</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Status</th>
+                            <th class="text-left text-xs font-bold tracking-wide uppercase text-on-surface-variant px-5 py-3">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in listings %}
+                        <tr class="border-t border-surface-container-high hover:bg-surface-container/50 cursor-pointer transition-colors" onclick="window.location='{% url 'admin_listing_edit' listing_id=listing.pk %}'">
+                            <td class="px-5 py-3">
+                                {% if listing.primary_image_url %}
+                                <div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container border border-outline-variant/20">
+                                    <img src="{{ listing.primary_image_url }}" alt="" class="w-full h-full object-cover">
+                                </div>
+                                {% else %}
+                                <div class="w-12 h-12 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-lg">image</span>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-3">
+                                <p class="text-sm font-semibold text-on-surface">{{ listing.title }}</p>
+                                {% if listing.source_quote %}<p class="text-xs text-on-surface-variant mt-0.5">from @{{ listing.source_quote.user.username }}'s buy-back</p>{% endif %}
+                            </td>
+                            <td class="px-5 py-3 text-sm text-on-surface-variant">{{ listing.category|default:"—" }}</td>
+                            <td class="px-5 py-3 text-sm font-bold text-on-surface tabular-nums">${{ listing.price }}</td>
+                            <td class="px-5 py-3 text-sm text-on-surface-variant tabular-nums">{{ listing.quantity }}</td>
+                            <td class="px-5 py-3">
+                                <span class="inline-flex text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
+                                    {% if listing.status == 'draft' %}bg-surface-container text-on-surface-variant border border-outline-variant/40
+                                    {% elif listing.status == 'active' %}bg-emerald-50 text-emerald-800 border border-emerald-200
+                                    {% elif listing.status == 'sold' %}bg-primary/10 text-primary border border-primary/20
+                                    {% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">{{ listing.get_status_display }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-sm text-on-surface-variant whitespace-nowrap">{{ listing.created_at|date:"M j, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="px-5 py-8 text-center text-sm text-on-surface-variant">No listings yet. Create one from a picked-up item below, or start from scratch.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ---- Picked-up items not yet listed ---- #}
+        <section>
+            <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-1">Picked up, not yet listed</h2>
+            <p class="text-on-surface-variant text-sm mb-4 font-body">Buy-back items ready to become listings.</p>
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+                <div class="divide-y divide-outline-variant/15">
+                    {% for q in unlisted_picked_up %}
+                    <div class="flex items-center justify-between gap-4 px-5 py-3 flex-wrap">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-on-surface truncate">{{ q.item_name }}</p>
+                            <p class="text-xs text-on-surface-variant">@{{ q.user.username }} &middot; {{ q.offer_display }} &middot; picked up {{ q.picked_up_at|date:"M j, Y" }}</p>
+                        </div>
+                        <a href="{% url 'admin_listing_create' %}?from_quote={{ q.pk }}" class="flex-shrink-0 text-xs font-semibold font-body text-primary border border-primary/30 px-3 py-1.5 rounded-full hover:bg-primary hover:text-on-primary transition-all">List for sale</a>
+                    </div>
+                    {% empty %}
+                    <p class="px-5 py-6 text-sm text-on-surface-variant text-center">Nothing waiting — every picked-up item has a listing.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+{% if vercel_analytics_enabled %}
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+{% endif %}
+{% endblock %}

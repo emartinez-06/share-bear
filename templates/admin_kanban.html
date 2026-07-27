@@ -42,6 +42,12 @@
         </div>
         {% endfor %}
 
+        <nav class="flex gap-5 mb-6 text-sm font-body font-semibold border-b border-outline-variant/20 pb-3">
+            <a href="{% url 'admin_kanban' %}" class="text-primary">Buy-back board</a>
+            <a href="{% url 'admin_quotes' %}" class="text-on-surface-variant hover:text-primary transition-colors">AI quotes</a>
+            <a href="{% url 'admin_listings' %}" class="text-on-surface-variant hover:text-primary transition-colors">Listings</a>
+        </nav>
+
         <section class="mb-6">
             <h1 class="font-display font-bold text-3xl text-primary tracking-tightest">Admin Dashboard</h1>
             <p class="text-on-surface-variant text-sm mt-1 font-body">Track submitted items across the full buy-back pipeline.</p>
@@ -383,16 +389,19 @@
                         </button>
                         <div id="pckup-{{ group.user.pk }}" class="hidden border-t border-outline-variant/20 divide-y divide-outline-variant/10">
                             {% for q in group.items %}
-                            <button type="button" onclick="openModal('modal-{{ q.pk }}')"
-                                class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
-                                    <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.picked_up_at|date:"M j" }}</span>
-                                </div>
-                                {% if q.pickup_label_color or q.pickup_label_number %}
-                                <p class="text-[10px] text-on-surface-variant font-body mt-1">Tag: {{ q.pickup_label_color|default:"—"|title }}{% if q.pickup_label_number %} #{{ q.pickup_label_number }}{% endif %}</p>
-                                {% endif %}
-                            </button>
+                            <div>
+                                <button type="button" onclick="openModal('modal-{{ q.pk }}')"
+                                    class="w-full text-left px-4 py-3 hover:bg-surface-container transition-colors group">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <p class="font-body font-semibold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">{{ q.item_name }}</p>
+                                        <span class="flex-shrink-0 text-[10px] text-on-surface-variant font-body whitespace-nowrap">{{ q.picked_up_at|date:"M j" }}</span>
+                                    </div>
+                                    {% if q.pickup_label_color or q.pickup_label_number %}
+                                    <p class="text-[10px] text-on-surface-variant font-body mt-1">Tag: {{ q.pickup_label_color|default:"—"|title }}{% if q.pickup_label_number %} #{{ q.pickup_label_number }}{% endif %}</p>
+                                    {% endif %}
+                                </button>
+                                <a href="{% url 'admin_listing_create' %}?from_quote={{ q.pk }}" class="block px-4 pb-2.5 -mt-1 text-[11px] font-semibold font-body text-primary hover:underline">List for sale &rarr;</a>
+                            </div>
                             {% endfor %}
                         </div>
                     </div>

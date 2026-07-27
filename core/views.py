@@ -1,4 +1,5 @@
 import logging
+import os
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
@@ -11,10 +12,18 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, QuoteVideoForm
+from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, ListingForm, ListingImageUploadForm, QuoteVideoForm
 from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini, parse_offer_amount
-from .models import AIQuote
-from .supabase_storage import create_presigned_upload_url, create_signed_video_url, is_storage_configured, upload_quote_video
+from .models import AIQuote, Listing, ListingImage
+from .supabase_storage import (
+    create_presigned_upload_url,
+    create_signed_video_url,
+    delete_listing_image,
+    is_storage_configured,
+    listing_image_public_url,
+    upload_listing_image,
+    upload_quote_video,
+)
 from .video_utils import file_extension_for_upload, video_mime_type_from_path
 
 logger = logging.getLogger(__name__)
@@ -23,10 +32,18 @@ logger = logging.getLogger(__name__)
 DEV_MOCK_QUOTE_ITEM_NAME = 'Sample item (dev preview)'
 DEV_MOCK_OFFER_DISPLAY = '$127'
 LEGACY_ASSIGNED_ADMIN_PLACEHOLDER = 'Erick'
+_ALLOWED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
 
 
 def _normalized_admin_name(raw_name: str) -> str:
     return (raw_name or '').strip()
+
+
+def _image_extension_for_upload(name: str) -> str:
+    ext = (os.path.splitext(name or '')[1] or '.jpg').lower()
+    if ext not in _ALLOWED_IMAGE_EXTENSIONS:
+        return '.jpg'
+    return ext
 
 
 def _effective_assigned_admin_name(quote_obj: AIQuote) -> str:
@@ -1027,3 +1044,219 @@ def quote_video_confirm_view(request, quote_id: int):
         'ok': True,
         'message': "Video received. Your offer is pending review—SHARE Bear will confirm once we've watched it.",
     })
+
+
+def _require_admin(request):
+    """Shared guard for admin-only listing views. Returns a redirect/403 response, or None if allowed."""
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={quote(request.path)}")
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponseForbidden('You do not have access to this page.')
+    return None
+
+
+def admin_listings_view(request):
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    status_filter = request.GET.get('status', '')
+    listings_qs = Listing.objects.select_related('source_quote', 'source_quote__user').prefetch_related('images')
+    total_count = listings_qs.count()
+    if status_filter in dict(Listing.Status.choices):
+        listings_qs = listings_qs.filter(status=status_filter)
+    listings = list(listings_qs)
+
+    status_tabs = [
+        (key, label, Listing.objects.filter(status=key).count())
+        for key, label in Listing.Status.choices
+    ]
+    for listing in listings:
+        images = listing.images.all()
+        listing.primary_image_url = listing_image_public_url(images[0].image_path) if images else None
+
+    listed_quote_ids = set(
+        Listing.objects.exclude(source_quote__isnull=True).values_list('source_quote_id', flat=True)
+    )
+    unlisted_picked_up = (
+        AIQuote.objects.filter(picked_up=True)
+        .exclude(pk__in=listed_quote_ids)
+        .select_related('user')
+        .order_by('-picked_up_at')
+    )
+
+    return render(
+        request,
+        'admin_listings.html',
+        {
+            'listings': listings,
+            'status_filter': status_filter,
+            'status_tabs': status_tabs,
+            'total_count': total_count,
+            'unlisted_picked_up': unlisted_picked_up,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )
+
+
+def admin_listing_create_view(request):
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    source_quote = None
+    from_quote_id = request.GET.get('from_quote') or request.POST.get('from_quote')
+    if from_quote_id:
+        source_quote = AIQuote.objects.filter(pk=from_quote_id).first()
+
+    if request.method == 'POST':
+        form = ListingForm(request.POST)
+        if form.is_valid():
+            listing = Listing.objects.create(
+                source_quote=source_quote,
+                title=form.cleaned_data['title'],
+                description=form.cleaned_data['description'],
+                category=form.cleaned_data['category'],
+                condition=form.cleaned_data['condition'],
+                price=form.cleaned_data['price'],
+                quantity=form.cleaned_data['quantity'],
+                status=form.cleaned_data['status'],
+            )
+            messages.success(request, f'Listing "{listing.title}" created. Add photos below.')
+            return redirect('admin_listing_edit', listing_id=listing.pk)
+    else:
+        initial = {'status': Listing.Status.DRAFT, 'quantity': 1}
+        if source_quote:
+            initial['title'] = source_quote.item_name
+            initial['description'] = source_quote.description
+            initial['category'] = source_quote.make
+            offer = parse_offer_amount(source_quote.offer_display)
+            if offer is not None:
+                initial['price'] = offer
+        form = ListingForm(initial=initial)
+
+    return render(
+        request,
+        'admin_listing_form.html',
+        {
+            'form': form,
+            'listing': None,
+            'source_quote': source_quote,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )
+
+
+def admin_listing_edit_view(request, listing_id: int):
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(Listing, pk=listing_id)
+
+    if request.method == 'POST':
+        form = ListingForm(request.POST)
+        if form.is_valid():
+            listing.title = form.cleaned_data['title']
+            listing.description = form.cleaned_data['description']
+            listing.category = form.cleaned_data['category']
+            listing.condition = form.cleaned_data['condition']
+            listing.price = form.cleaned_data['price']
+            listing.quantity = form.cleaned_data['quantity']
+            new_status = form.cleaned_data['status']
+            if new_status == Listing.Status.SOLD and listing.status != Listing.Status.SOLD:
+                listing.sold_at = timezone.now()
+            elif new_status != Listing.Status.SOLD:
+                listing.sold_at = None
+            listing.status = new_status
+            listing.save()
+            messages.success(request, f'Listing "{listing.title}" updated.')
+            return redirect('admin_listing_edit', listing_id=listing.pk)
+    else:
+        form = ListingForm(initial={
+            'title': listing.title,
+            'description': listing.description,
+            'category': listing.category,
+            'condition': listing.condition,
+            'price': listing.price,
+            'quantity': listing.quantity,
+            'status': listing.status,
+        })
+
+    images = list(listing.images.all())
+    for img in images:
+        img.public_url = listing_image_public_url(img.image_path)
+
+    return render(
+        request,
+        'admin_listing_form.html',
+        {
+            'form': form,
+            'listing': listing,
+            'source_quote': listing.source_quote,
+            'images': images,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )
+
+
+@require_http_methods(['POST'])
+def admin_listing_photo_upload_view(request, listing_id: int):
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(Listing, pk=listing_id)
+    form = ListingImageUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
+        err = form.errors.get('image', ['Invalid upload.'])
+        messages.error(request, err[0])
+        return redirect('admin_listing_edit', listing_id=listing.pk)
+
+    if not is_storage_configured():
+        messages.error(request, 'Image upload is not configured.')
+        return redirect('admin_listing_edit', listing_id=listing.pk)
+
+    image = form.cleaned_data['image']
+    data = image.read()
+    ext = _image_extension_for_upload(getattr(image, 'name', '') or '')
+    object_path = f'listing_{listing.pk}/{timezone.now().strftime("%Y%m%d%H%M%S%f")}{ext}'
+    try:
+        upload_listing_image(
+            file_bytes=data,
+            object_path=object_path,
+            content_type=image.content_type or 'image/jpeg',
+        )
+    except RuntimeError as e:
+        messages.error(request, str(e) or 'Upload failed. Try a smaller file or a different format.')
+        return redirect('admin_listing_edit', listing_id=listing.pk)
+
+    is_first = not listing.images.exists()
+    ListingImage.objects.create(
+        listing=listing,
+        image_path=object_path,
+        is_primary=is_first,
+        sort_order=listing.images.count(),
+    )
+    messages.success(request, 'Photo uploaded.')
+    return redirect('admin_listing_edit', listing_id=listing.pk)
+
+
+@require_http_methods(['POST'])
+def admin_listing_photo_delete_view(request, listing_id: int, image_id: int):
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(Listing, pk=listing_id)
+    image = get_object_or_404(ListingImage, pk=image_id, listing=listing)
+    was_primary = image.is_primary
+    delete_listing_image(image.image_path)
+    image.delete()
+    if was_primary:
+        next_image = listing.images.first()
+        if next_image:
+            next_image.is_primary = True
+            next_image.save(update_fields=['is_primary'])
+    messages.success(request, 'Photo removed.')
+    return redirect('admin_listing_edit', listing_id=listing.pk)

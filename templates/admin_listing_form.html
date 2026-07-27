@@ -1,0 +1,169 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}{% if listing %}Edit listing{% else %}New listing{% endif %} | SHARE Bear{% endblock %}
+
+{% block body %}
+<div class="min-h-screen">
+    <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+        <div class="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-8">
+                <a href="{% url 'home' %}" class="flex items-center gap-3">
+                    <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+                </a>
+                <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'home' %}">Marketplace</a>
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1" href="{% url 'admin_kanban' %}">Admin Panel</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                    <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+                </a>
+                <form method="post" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Log out</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-28 pb-20 px-6 max-w-3xl mx-auto">
+        {% for message in messages %}
+        <div class="mb-4 rounded-lg px-4 py-3 text-sm font-body border {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-900{% else %}border-emerald-200 bg-emerald-50 text-emerald-900{% endif %}" role="alert">{{ message }}</div>
+        {% endfor %}
+
+        <nav class="flex gap-5 mb-6 text-sm font-body font-semibold border-b border-outline-variant/20 pb-3">
+            <a href="{% url 'admin_kanban' %}" class="text-on-surface-variant hover:text-primary transition-colors">Buy-back board</a>
+            <a href="{% url 'admin_quotes' %}" class="text-on-surface-variant hover:text-primary transition-colors">AI quotes</a>
+            <a href="{% url 'admin_listings' %}" class="text-primary">Listings</a>
+        </nav>
+
+        <a href="{% url 'admin_listings' %}" class="inline-flex items-center gap-1 text-sm font-semibold font-body text-on-surface-variant hover:text-primary transition-colors mb-4">
+            <span class="material-symbols-outlined text-base">arrow_back</span> All listings
+        </a>
+
+        <h1 class="font-display font-bold text-3xl text-primary tracking-tightest mb-1">
+            {% if listing %}Edit listing{% else %}New listing{% endif %}
+        </h1>
+
+        {% if source_quote %}
+        <p class="text-sm text-on-surface-variant font-body mb-6">
+            Sourced from <span class="font-semibold text-on-surface">{{ source_quote.item_name }}</span>,
+            bought back from @{{ source_quote.user.username }} for {{ source_quote.offer_display }}.
+        </p>
+        {% else %}
+        <p class="text-sm text-on-surface-variant font-body mb-6">Not linked to a buy-back item.</p>
+        {% endif %}
+
+        <form method="post" class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 space-y-5">
+            {% csrf_token %}
+            {% if source_quote %}<input type="hidden" name="from_quote" value="{{ source_quote.pk }}">{% endif %}
+
+            <div>
+                <label for="id_title" class="block text-sm font-semibold text-on-surface mb-1">Title</label>
+                <input id="id_title" name="title" type="text" required maxlength="200" value="{{ form.title.value|default:'' }}"
+                    class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                {% if form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ form.title.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="id_description" class="block text-sm font-semibold text-on-surface mb-1">Description</label>
+                <textarea id="id_description" name="description" rows="4" required
+                    class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}<p class="text-xs text-red-600 mt-1">{{ form.description.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="id_category" class="block text-sm font-semibold text-on-surface mb-1">Category</label>
+                    <input id="id_category" name="category" type="text" maxlength="100" value="{{ form.category.value|default:'' }}" placeholder="e.g. Furniture, Electronics"
+                        class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                </div>
+                <div>
+                    <label for="id_condition" class="block text-sm font-semibold text-on-surface mb-1">Condition</label>
+                    <select id="id_condition" name="condition"
+                        class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                        {% for value, label in form.fields.condition.choices %}
+                        <option value="{{ value }}" {% if form.condition.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="id_price" class="block text-sm font-semibold text-on-surface mb-1">Price (USD)</label>
+                    <input id="id_price" name="price" type="number" min="0" step="0.01" required value="{{ form.price.value|default:'' }}"
+                        class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                    {% if form.price.errors %}<p class="text-xs text-red-600 mt-1">{{ form.price.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="id_quantity" class="block text-sm font-semibold text-on-surface mb-1">Quantity</label>
+                    <input id="id_quantity" name="quantity" type="number" min="1" step="1" required value="{{ form.quantity.value|default:'1' }}"
+                        class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                </div>
+                <div>
+                    <label for="id_status" class="block text-sm font-semibold text-on-surface mb-1">Status</label>
+                    <select id="id_status" name="status"
+                        class="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                        {% for value, label in form.fields.status.choices %}
+                        <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full font-display font-bold text-on-primary bg-primary px-5 py-3 rounded-xl hover:opacity-90 transition-opacity">
+                {% if listing %}Save changes{% else %}Create listing{% endif %}
+            </button>
+        </form>
+
+        {# ---- Photos ---- #}
+        <section class="mt-8">
+            <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-1">Photos</h2>
+            {% if listing %}
+            <p class="text-on-surface-variant text-sm mb-4 font-body">The first photo uploaded is used as the catalogue thumbnail.</p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {% for image in images %}
+                <div class="relative rounded-xl overflow-hidden border border-outline-variant/30 aspect-square bg-surface-container group">
+                    {% if image.public_url %}
+                    <img src="{{ image.public_url }}" alt="" class="w-full h-full object-cover">
+                    {% endif %}
+                    {% if image.is_primary %}
+                    <span class="absolute top-1.5 left-1.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary text-on-primary">Primary</span>
+                    {% endif %}
+                    <form method="post" action="{% url 'admin_listing_photo_delete' listing_id=listing.pk image_id=image.pk %}"
+                        class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {% csrf_token %}
+                        <button type="submit" title="Remove photo" class="w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+                            <span class="material-symbols-outlined text-base">close</span>
+                        </button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="col-span-full text-sm text-on-surface-variant font-body">No photos yet.</p>
+                {% endfor %}
+            </div>
+
+            <form method="post" action="{% url 'admin_listing_photo_upload' listing_id=listing.pk %}" enctype="multipart/form-data" class="flex items-center gap-2">
+                {% csrf_token %}
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required
+                    class="flex-1 text-sm text-on-surface-variant file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                <button type="submit" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap">Upload photo</button>
+            </form>
+            {% else %}
+            <p class="text-on-surface-variant text-sm font-body">Save the listing first, then come back here to add photos.</p>
+            {% endif %}
+        </section>
+    </main>
+</div>
+
+{% if vercel_analytics_enabled %}
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+{% endif %}
+{% endblock %}

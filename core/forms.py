@@ -3,6 +3,8 @@ from decimal import Decimal, InvalidOperation
 from django import forms
 from django.conf import settings
 
+from .models import Listing
+
 
 class AIQuoteForm(forms.Form):
     item_name = forms.CharField(
@@ -156,3 +158,42 @@ class BookingLinkForm(forms.Form):
             'placeholder': 'https://outlook.office365.com/book/...',
         }),
     )
+
+
+_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+
+
+class ListingImageUploadForm(forms.Form):
+    image = forms.FileField(label='Photo')
+
+    def __init__(self, *args, max_bytes: int | None = None, **kwargs):
+        self.max_bytes = max_bytes or getattr(
+            settings, 'LISTING_IMAGE_MAX_BYTES', 10 * 1024 * 1024
+        )
+        super().__init__(*args, **kwargs)
+
+    def clean_image(self):
+        f = self.cleaned_data.get('image')
+        if f is None:
+            raise forms.ValidationError('Select an image file.')
+        if f.size > self.max_bytes:
+            mb = self.max_bytes // (1024 * 1024)
+            raise forms.ValidationError(f'File is too large (max {mb} MB).')
+        ct = (getattr(f, 'content_type', None) or '').lower()
+        name = (getattr(f, 'name', '') or '').lower()
+        if ct not in _IMAGE_TYPES and not any(
+            name.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.webp')
+        ):
+            raise forms.ValidationError('Please upload a JPEG, PNG, or WebP image.')
+        return f
+
+
+class ListingForm(forms.Form):
+    title = forms.CharField(max_length=200)
+    description = forms.CharField(widget=forms.Textarea)
+    category = forms.CharField(max_length=100, required=False)
+    condition = forms.ChoiceField(
+        choices=[('', '—')] + Listing.Condition.choices, required=False)
+    price = forms.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0'))
+    quantity = forms.IntegerField(min_value=1, initial=1)
+    status = forms.ChoiceField(choices=Listing.Status.choices)

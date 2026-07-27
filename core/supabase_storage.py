@@ -158,6 +158,30 @@ def create_signed_video_url(object_path: str, expires_in: int = 600) -> str | No
     return f'{base}/storage/v1/{signed}'
 
 
+def delete_listing_image(object_path: str) -> None:
+    """
+    Delete an object from the listing-images bucket. Best-effort — logs and
+    swallows failures rather than blocking the caller from removing the
+    ListingImage row (an orphaned storage object is a minor cleanup issue,
+    not a correctness one).
+    """
+    if not is_storage_configured() or not object_path:
+        return
+    base = (settings.SUPABASE_URL or '').rstrip('/')
+    bucket = settings.SUPABASE_LISTING_IMAGES_BUCKET
+    enc = _encode_object_path(object_path)
+    url = f'{base}/storage/v1/object/{urllib.parse.quote(bucket)}/{enc}'
+    req = urllib.request.Request(url, method='DELETE', headers=_auth_headers())
+    try:
+        with urllib.request.urlopen(req, timeout=30):
+            pass
+    except urllib.error.HTTPError as e:
+        err = e.read().decode('utf-8', errors='replace')
+        logger.error('Supabase delete HTTP %s: %s', e.code, err)
+    except Exception:
+        logger.exception('Supabase delete failed')
+
+
 def listing_image_public_url(object_path: str) -> str | None:
     """
     Build a stable public URL for an object in the (public) listing-images bucket.
