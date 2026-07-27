@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AIQuote
+from .models import AIQuote, Listing, ListingImage
 
 
 @admin.register(AIQuote)
@@ -43,3 +43,25 @@ class AIQuoteAdmin(admin.ModelAdmin):
             return '—'
         s = (obj.google_event_id or '')[:20]
         return f'{s}…' if len(obj.google_event_id) > 20 else s
+
+
+class ListingImageInline(admin.TabularInline):
+    model = ListingImage
+    extra = 0
+
+
+@admin.register(Listing)
+class ListingAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'price',
+        'quantity',
+        'status',
+        'condition',
+        'source_quote',
+        'created_at',
+    )
+    search_fields = ('title', 'description', 'category')
+    list_filter = ('status', 'condition', 'category', 'created_at')
+    readonly_fields = ('created_at',)
+    inlines = [ListingImageInline]

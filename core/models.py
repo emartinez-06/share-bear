@@ -113,3 +113,66 @@ class AIQuote(models.Model):
 
     def __str__(self):
         return f'{self.user.username}: {self.item_name}'
+
+
+class Listing(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
+        ACTIVE = 'active', 'Active'
+        SOLD = 'sold', 'Sold'
+        ARCHIVED = 'archived', 'Archived'
+
+    class Condition(models.TextChoices):
+        NEW = 'new', 'New'
+        LIKE_NEW = 'like_new', 'Like new'
+        GOOD = 'good', 'Good'
+        FAIR = 'fair', 'Fair'
+        POOR = 'poor', 'Poor'
+
+    source_quote = models.ForeignKey(
+        AIQuote,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='listings',
+        help_text='The buy-back item this listing was created from, if any.',
+    )
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=100, blank=True)
+    condition = models.CharField(
+        max_length=16, choices=Condition.choices, blank=True)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    quantity = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    sold_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class ListingImage(models.Model):
+    listing = models.ForeignKey(
+        Listing, on_delete=models.CASCADE, related_name='images')
+    image_path = models.CharField(
+        max_length=1024,
+        help_text='Object path in Supabase Storage (listing-images bucket).',
+    )
+    is_primary = models.BooleanField(default=False)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'created_at']
+
+    def __str__(self):
+        return f'{self.listing.title}: image {self.pk}'
