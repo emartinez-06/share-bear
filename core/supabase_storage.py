@@ -34,14 +34,13 @@ def _encode_object_path(path: str) -> str:
     return '/'.join(urllib.parse.quote(p, safe='') for p in parts)
 
 
-def upload_quote_video(*, file_bytes: bytes, object_path: str, content_type: str) -> None:
+def _upload_object(*, file_bytes: bytes, bucket: str, object_path: str, content_type: str) -> None:
     """
-    Upload bytes to the quote-videos bucket. Uses upsert to replace an object at the same path.
+    Upload bytes to a bucket. Uses upsert to replace an object at the same path.
     """
     if not is_storage_configured():
         raise RuntimeError('Supabase Storage is not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).')
     base = (settings.SUPABASE_URL or '').rstrip('/')
-    bucket = settings.SUPABASE_QUOTE_VIDEOS_BUCKET
     enc = _encode_object_path(object_path)
     url = f'{base}/storage/v1/object/{urllib.parse.quote(bucket)}/{enc}'
     req = urllib.request.Request(
@@ -62,10 +61,28 @@ def upload_quote_video(*, file_bytes: bytes, object_path: str, content_type: str
     except urllib.error.HTTPError as e:
         err = e.read().decode('utf-8', errors='replace')
         logger.error('Supabase upload HTTP %s: %s', e.code, err)
-        raise RuntimeError(f'Video upload failed ({e.code}).') from None
+        raise RuntimeError(f'Upload failed ({e.code}).') from None
 
 
-def create_presigned_upload_url(object_path: str) -> str | None:
+def upload_quote_video(*, file_bytes: bytes, object_path: str, content_type: str) -> None:
+    _upload_object(
+        file_bytes=file_bytes,
+        bucket=settings.SUPABASE_QUOTE_VIDEOS_BUCKET,
+        object_path=object_path,
+        content_type=content_type,
+    )
+
+
+def upload_listing_image(*, file_bytes: bytes, object_path: str, content_type: str) -> None:
+    _upload_object(
+        file_bytes=file_bytes,
+        bucket=settings.SUPABASE_LISTING_IMAGES_BUCKET,
+        object_path=object_path,
+        content_type=content_type,
+    )
+
+
+def _create_presigned_upload_url(bucket: str, object_path: str) -> str | None:
     """
     Create a Supabase Storage presigned upload URL for direct client-side upload.
     The browser can PUT the file bytes directly to the returned URL without hitting Django/Vercel.
@@ -73,7 +90,6 @@ def create_presigned_upload_url(object_path: str) -> str | None:
     if not is_storage_configured() or not object_path:
         return None
     base = (settings.SUPABASE_URL or '').rstrip('/')
-    bucket = settings.SUPABASE_QUOTE_VIDEOS_BUCKET
     enc = _encode_object_path(object_path)
     url = f'{base}/storage/v1/object/upload/sign/{urllib.parse.quote(bucket)}/{enc}'
     req = urllib.request.Request(
@@ -99,6 +115,10 @@ def create_presigned_upload_url(object_path: str) -> str | None:
     if url_path.startswith('http://') or url_path.startswith('https://'):
         return url_path
     return f'{base}{url_path}'
+
+
+def create_presigned_upload_url(object_path: str) -> str | None:
+    return _create_presigned_upload_url(settings.SUPABASE_QUOTE_VIDEOS_BUCKET, object_path)
 
 
 def create_signed_video_url(object_path: str, expires_in: int = 600) -> str | None:
@@ -136,3 +156,17 @@ def create_signed_video_url(object_path: str, expires_in: int = 600) -> str | No
     if signed.startswith('/'):
         return f'{base}/storage/v1{signed}'
     return f'{base}/storage/v1/{signed}'
+
+
+def listing_image_public_url(object_path: str) -> str | None:
+    """
+    Build a stable public URL for an object in the (public) listing-images bucket.
+    No signing/expiry needed since the bucket is public — catalogue photos should
+    load directly without an auth round trip.
+    """
+    if not (settings.SUPABASE_URL or '').strip() or not object_path:
+        return None
+    base = (settings.SUPABASE_URL or '').rstrip('/')
+    bucket = settings.SUPABASE_LISTING_IMAGES_BUCKET
+    enc = _encode_object_path(object_path)
+    return f'{base}/storage/v1/object/public/{urllib.parse.quote(bucket)}/{enc}'

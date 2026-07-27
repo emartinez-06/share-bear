@@ -215,6 +215,11 @@ SUPABASE_URL = (os.environ.get('SUPABASE_URL', '') or '').rstrip('/')
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '') or None
 SUPABASE_QUOTE_VIDEOS_BUCKET = os.environ.get('SUPABASE_QUOTE_VIDEOS_BUCKET', 'quote-videos')
 
+# Supabase Storage (listing photos) — public bucket, since catalogue images need to be
+# viewable by anyone browsing the shop without a signed-URL round trip.
+# Create bucket `listing-images` (public) in the Supabase dashboard.
+SUPABASE_LISTING_IMAGES_BUCKET = os.environ.get('SUPABASE_LISTING_IMAGES_BUCKET', 'listing-images')
+
 # Google Calendar (pickup: preset weekly slots in app, events.insert on book; service account)
 # Share the destination calendar with the service account; enable Calendar API in GCP.
 def _env_csv(name: str) -> list[str]:
