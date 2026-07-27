@@ -161,31 +161,25 @@ class BookingLinkForm(forms.Form):
 
 
 _IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
 
 
-class ListingImageUploadForm(forms.Form):
-    image = forms.FileField(label='Photo')
-
-    def __init__(self, *args, max_bytes: int | None = None, **kwargs):
-        self.max_bytes = max_bytes or getattr(
-            settings, 'LISTING_IMAGE_MAX_BYTES', 10 * 1024 * 1024
-        )
-        super().__init__(*args, **kwargs)
-
-    def clean_image(self):
-        f = self.cleaned_data.get('image')
-        if f is None:
-            raise forms.ValidationError('Select an image file.')
-        if f.size > self.max_bytes:
-            mb = self.max_bytes // (1024 * 1024)
-            raise forms.ValidationError(f'File is too large (max {mb} MB).')
-        ct = (getattr(f, 'content_type', None) or '').lower()
-        name = (getattr(f, 'name', '') or '').lower()
-        if ct not in _IMAGE_TYPES and not any(
-            name.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.webp')
-        ):
-            raise forms.ValidationError('Please upload a JPEG, PNG, or WebP image.')
-        return f
+def listing_image_upload_error(f, max_bytes: int | None = None) -> str | None:
+    """
+    Validate one uploaded image file. Returns an error message (naming the
+    file) if invalid, or None if it's fine. Used for both a single-file
+    form and a multi-file upload loop, since Django's FileField doesn't
+    natively support multiple files without a custom field.
+    """
+    max_bytes = max_bytes or getattr(settings, 'LISTING_IMAGE_MAX_BYTES', 10 * 1024 * 1024)
+    name = (getattr(f, 'name', '') or 'file').strip()
+    if f.size > max_bytes:
+        mb = max_bytes // (1024 * 1024)
+        return f'{name}: too large (max {mb} MB).'
+    ct = (getattr(f, 'content_type', None) or '').lower()
+    if ct not in _IMAGE_TYPES and not any(name.lower().endswith(ext) for ext in _IMAGE_EXTENSIONS):
+        return f'{name}: must be a JPEG, PNG, or WebP image.'
+    return None
 
 
 class ListingForm(forms.Form):

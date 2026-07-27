@@ -151,10 +151,11 @@
 
             <form method="post" action="{% url 'admin_listing_photo_upload' listing_id=listing.pk %}" enctype="multipart/form-data" class="flex items-center gap-2">
                 {% csrf_token %}
-                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" multiple required
                     class="flex-1 text-sm text-on-surface-variant file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
-                <button type="submit" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap">Upload photo</button>
+                <button type="submit" class="text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap">Upload photos</button>
             </form>
+            <p class="text-xs text-on-surface-variant font-body mt-2">Select multiple files at once to upload them all in one go.</p>
             {% else %}
             <p class="text-on-surface-variant text-sm font-body">Save the listing first, then come back here to add photos.</p>
             {% endif %}

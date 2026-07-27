@@ -79,15 +79,22 @@
                         {% for listing in listings %}
                         <tr class="border-t border-surface-container-high hover:bg-surface-container/50 cursor-pointer transition-colors" onclick="window.location='{% url 'admin_listing_edit' listing_id=listing.pk %}'">
                             <td class="px-5 py-3">
-                                {% if listing.primary_image_url %}
-                                <div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container border border-outline-variant/20">
-                                    <img src="{{ listing.primary_image_url }}" alt="" class="w-full h-full object-cover">
+                                <div class="relative w-12 h-12">
+                                    {% if listing.primary_image_url %}
+                                    <div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container border border-outline-variant/20">
+                                        <img src="{{ listing.primary_image_url }}" alt="" class="w-full h-full object-cover">
+                                    </div>
+                                    {% else %}
+                                    <div class="w-12 h-12 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-lg">image</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if listing.photo_count %}
+                                    <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center">{{ listing.photo_count }}</span>
+                                    {% else %}
+                                    <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center" title="No photos yet">!</span>
+                                    {% endif %}
                                 </div>
-                                {% else %}
-                                <div class="w-12 h-12 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center text-on-surface-variant">
-                                    <span class="material-symbols-outlined text-lg">image</span>
-                                </div>
-                                {% endif %}
                             </td>
                             <td class="px-5 py-3">
                                 <p class="text-sm font-semibold text-on-surface">{{ listing.title }}</p>
@@ -115,9 +122,21 @@
 
         {# ---- Picked-up items not yet listed ---- #}
         <section>
-            <h2 class="font-display font-bold text-lg text-on-surface tracking-tight mb-1">Picked up, not yet listed</h2>
-            <p class="text-on-surface-variant text-sm mb-4 font-body">Buy-back items ready to become listings.</p>
-            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
+            <div class="flex items-start justify-between gap-4 flex-wrap mb-1">
+                <div>
+                    <h2 class="font-display font-bold text-lg text-on-surface tracking-tight">Picked up, not yet listed</h2>
+                    <p class="text-on-surface-variant text-sm font-body">Buy-back items ready to become listings.</p>
+                </div>
+                {% if unlisted_picked_up %}
+                <form method="post" action="{% url 'admin_listings_bulk_create' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-semibold font-body text-primary border border-primary/30 px-3 py-1.5 rounded-full hover:bg-primary hover:text-on-primary transition-all whitespace-nowrap">
+                        List all {{ unlisted_picked_up|length }} as drafts
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden mt-4">
                 <div class="divide-y divide-outline-variant/15">
                     {% for q in unlisted_picked_up %}
                     <div class="flex items-center justify-between gap-4 px-5 py-3 flex-wrap">

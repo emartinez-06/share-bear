@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, ListingForm, ListingImageUploadForm, QuoteVideoForm
+from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, ListingForm, QuoteVideoForm, listing_image_upload_error
 from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini, parse_offer_amount
 from .models import AIQuote, Listing, ListingImage
 from .supabase_storage import (
@@ -1074,11 +1074,12 @@ def admin_listings_view(request):
     for listing in listings:
         images = listing.images.all()
         listing.primary_image_url = listing_image_public_url(images[0].image_path) if images else None
+        listing.photo_count = len(images)
 
     listed_quote_ids = set(
         Listing.objects.exclude(source_quote__isnull=True).values_list('source_quote_id', flat=True)
     )
-    unlisted_picked_up = (
+    unlisted_picked_up = list(
         AIQuote.objects.filter(picked_up=True)
         .exclude(pk__in=listed_quote_ids)
         .select_related('user')
@@ -1097,6 +1098,44 @@ def admin_listings_view(request):
             'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
         },
     )
+
+
+def _draft_listing_from_quote(q: AIQuote) -> Listing:
+    return Listing.objects.create(
+        source_quote=q,
+        title=q.item_name,
+        description=q.description,
+        category=(q.make or '').strip(),
+        price=parse_offer_amount(q.offer_display) or 0,
+        quantity=1,
+        status=Listing.Status.DRAFT,
+    )
+
+
+@require_http_methods(['POST'])
+def admin_listings_bulk_create_view(request):
+    """Create a draft listing for every picked-up quote that doesn't have one yet."""
+    denied = _require_admin(request)
+    if denied:
+        return denied
+
+    listed_quote_ids = set(
+        Listing.objects.exclude(source_quote__isnull=True).values_list('source_quote_id', flat=True)
+    )
+    unlisted = AIQuote.objects.filter(picked_up=True).exclude(pk__in=listed_quote_ids)
+    count = 0
+    for q in unlisted:
+        _draft_listing_from_quote(q)
+        count += 1
+
+    if count:
+        messages.success(
+            request,
+            f'Created {count} draft listing{"s" if count != 1 else ""}. Add photos and publish each when ready.',
+        )
+    else:
+        messages.info(request, 'No picked-up items are waiting to be listed.')
+    return redirect('admin_listings')
 
 
 def admin_listing_create_view(request):
@@ -1207,38 +1246,50 @@ def admin_listing_photo_upload_view(request, listing_id: int):
         return denied
 
     listing = get_object_or_404(Listing, pk=listing_id)
-    form = ListingImageUploadForm(request.POST, request.FILES)
-    if not form.is_valid():
-        err = form.errors.get('image', ['Invalid upload.'])
-        messages.error(request, err[0])
+    files = request.FILES.getlist('image')
+    if not files:
+        messages.error(request, 'Select at least one image file.')
         return redirect('admin_listing_edit', listing_id=listing.pk)
 
     if not is_storage_configured():
         messages.error(request, 'Image upload is not configured.')
         return redirect('admin_listing_edit', listing_id=listing.pk)
 
-    image = form.cleaned_data['image']
-    data = image.read()
-    ext = _image_extension_for_upload(getattr(image, 'name', '') or '')
-    object_path = f'listing_{listing.pk}/{timezone.now().strftime("%Y%m%d%H%M%S%f")}{ext}'
-    try:
-        upload_listing_image(
-            file_bytes=data,
-            object_path=object_path,
-            content_type=image.content_type or 'image/jpeg',
+    next_sort_order = listing.images.count()
+    uploaded = 0
+    errors = []
+    for f in files:
+        err = listing_image_upload_error(f)
+        if err:
+            errors.append(err)
+            continue
+        ext = _image_extension_for_upload(getattr(f, 'name', '') or '')
+        object_path = f'listing_{listing.pk}/{timezone.now().strftime("%Y%m%d%H%M%S%f")}_{next_sort_order}{ext}'
+        try:
+            upload_listing_image(
+                file_bytes=f.read(),
+                object_path=object_path,
+                content_type=f.content_type or 'image/jpeg',
+            )
+        except RuntimeError as e:
+            errors.append(f'{f.name}: {e or "upload failed"}')
+            continue
+        ListingImage.objects.create(
+            listing=listing,
+            image_path=object_path,
+            is_primary=(next_sort_order == 0),
+            sort_order=next_sort_order,
         )
-    except RuntimeError as e:
-        messages.error(request, str(e) or 'Upload failed. Try a smaller file or a different format.')
-        return redirect('admin_listing_edit', listing_id=listing.pk)
+        next_sort_order += 1
+        uploaded += 1
 
-    is_first = not listing.images.exists()
-    ListingImage.objects.create(
-        listing=listing,
-        image_path=object_path,
-        is_primary=is_first,
-        sort_order=listing.images.count(),
-    )
-    messages.success(request, 'Photo uploaded.')
+    if uploaded:
+        messages.success(request, f'Uploaded {uploaded} photo{"s" if uploaded != 1 else ""}.')
+    if errors:
+        shown = '; '.join(errors[:5])
+        if len(errors) > 5:
+            shown += f' … and {len(errors) - 5} more'
+        messages.error(request, shown)
     return redirect('admin_listing_edit', listing_id=listing.pk)
 
 
