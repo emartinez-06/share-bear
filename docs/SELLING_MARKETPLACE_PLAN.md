@@ -101,11 +101,20 @@ Updated as each increment lands; git history has the full detail, this is just t
 - [x] Basic Django-admin registration (`/admin/`) for `Listing`/`ListingImage`, for visibility while the custom admin UI is pending.
 - [x] `core/supabase_storage.py` generalized (bucket-parameterized internals) + `upload_listing_image` / `listing_image_public_url` added. Existing quote-video call sites untouched. Uses a server-side multipart upload (not presigned direct-to-client like video) since admin-uploaded listing photos are small and don't need to bypass Vercel's function payload path.
 - [x] `listing-images` Supabase bucket created in production (public, unlike the private `quote-videos` bucket; 10 MB file size limit; JPEG/PNG/WebP only). Created via the Supabase MCP with Erick's go-ahead; `get_advisors` showed no new security findings afterward.
-- [ ] Admin: create a listing from a picked-up quote, upload photos, set price/condition, publish/unpublish.
-- [ ] Admin: listings management view (filter-sidebar/grid-list pattern).
+- [x] Admin: create a listing from a picked-up quote (`/admin-dashboard/listings/new/?from_quote=<id>`, prefills title/description/category/price), upload/delete photos, set price/condition/status. "List for sale" entry points added on the kanban board's Picked Up column and on the listings page's "not yet listed" section.
+- [x] Admin: listings management view (`/admin-dashboard/listings/`) - simple status-tab table, not the full sidebar-filter treatment the buy-back board got (deliberately lighter weight for what will start as a handful of listings; can grow into the fuller pattern later if the catalogue gets large). All three admin pages (buy-back board, AI quotes, listings) now cross-link via a shared sub-nav.
+- [x] Verified end-to-end against production: created a real listing, uploaded a photo, confirmed the public URL was fetchable, deleted the photo (confirmed both the DB row and the underlying Supabase Storage object were gone, via `storage.objects` and a cache-busted fetch), deleted the listing. Production `Listing` table is back to 0 rows.
 
 ### Phase 1 - Public catalogue, cart, manual-payment checkout
-- [ ] Not started.
+- [x] `/shop/` catalogue grid - search, category filter pills, "sold out" badge when quantity is 0, empty state for a bare catalogue. No login required to browse (confirmed with an anonymous test client) - login is only required starting at checkout, matching how the AI Quote page already works.
+- [x] `/shop/<id>/` listing detail - image gallery (thumbnail strip swaps the main image), condition/category, description. No "Add to cart" yet since Cart doesn't exist - shows a "coming soon, contact us to arrange purchase" notice instead of a non-functional button.
+- [x] "Marketplace" nav link across all 9 templates that had it now points to `/shop/` instead of the landing page.
+- [x] Verified end-to-end against production (including as an anonymous/logged-out client) with a real listing + photo, then fully cleaned up.
+- [ ] Cart (DB-backed, per user) - not started.
+- [ ] Checkout (pickup vs delivery, manual "pay at pickup/delivery") - not started.
+- [ ] `Order` model + buyer-facing "My Orders" page - not started.
+- [ ] Admin order fulfillment board - not started.
+- [ ] Homepage dual-CTA update ("Sell your stuff" + "Shop the marketplace") - not started.
 
 ### Phase 2 - Stripe integration
 - [ ] Not started.

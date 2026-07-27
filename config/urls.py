@@ -29,11 +29,15 @@ from core.views import (
     quote_video_confirm_view,
     quote_video_presigned_url_view,
     quote_video_upload_view,
+    shop_listing_detail_view,
+    shop_view,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_view, name='home'),
+    path('shop/', shop_view, name='shop'),
+    path('shop/<int:listing_id>/', shop_listing_detail_view, name='shop_listing_detail'),
     path('ai-quote/', ai_quote_view, name='ai_quote'),
     path('ai-quote/dev-success/', ai_quote_dev_success_view, name='ai_quote_dev_success'),
     path('ai-quote/complete/<int:quote_id>/', ai_quote_success_detail_view, name='ai_quote_success_detail'),

@@ -1260,3 +1260,54 @@ def admin_listing_photo_delete_view(request, listing_id: int, image_id: int):
             next_image.save(update_fields=['is_primary'])
     messages.success(request, 'Photo removed.')
     return redirect('admin_listing_edit', listing_id=listing.pk)
+
+
+def shop_view(request):
+    """Public catalogue. No login required - browsing is open, checkout will require it."""
+    category = (request.GET.get('category') or '').strip()
+    search = (request.GET.get('q') or '').strip()
+
+    listings = Listing.objects.filter(status=Listing.Status.ACTIVE).prefetch_related('images')
+    if category:
+        listings = listings.filter(category__iexact=category)
+    if search:
+        listings = listings.filter(title__icontains=search)
+    listings = list(listings.order_by('-created_at'))
+    for listing in listings:
+        images = listing.images.all()
+        listing.primary_image_url = listing_image_public_url(images[0].image_path) if images else None
+
+    categories = sorted({
+        c for c in Listing.objects.filter(status=Listing.Status.ACTIVE)
+        .exclude(category='').values_list('category', flat=True)
+    })
+
+    return render(
+        request,
+        'shop.html',
+        {
+            'listings': listings,
+            'categories': categories,
+            'category': category,
+            'search': search,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )
+
+
+def shop_listing_detail_view(request, listing_id: int):
+    """Public listing detail. No login required - browsing is open, checkout will require it."""
+    listing = get_object_or_404(Listing, pk=listing_id, status=Listing.Status.ACTIVE)
+    images = list(listing.images.all())
+    for img in images:
+        img.public_url = listing_image_public_url(img.image_path)
+
+    return render(
+        request,
+        'shop_listing_detail.html',
+        {
+            'listing': listing,
+            'images': images,
+            'vercel_analytics_enabled': settings.VERCEL_ANALYTICS_ENABLED,
+        },
+    )

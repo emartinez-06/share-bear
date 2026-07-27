@@ -1,0 +1,112 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}Shop | SHARE Bear{% endblock %}
+
+{% block body %}
+<div class="min-h-screen">
+    <header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl ambient-shadow">
+        <div class="flex justify-between items-center w-full px-4 sm:px-6 md:px-8 py-4 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-3 sm:gap-8">
+                <a href="{% url 'home' %}" class="flex items-center gap-3">
+                    <img src="{% static 'images/bearLogo.png' %}" alt="SHARE Bear Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <span class="font-display font-bold text-lg tracking-tightest text-primary">SHARE Bear</span>
+                </a>
+                <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
+                <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'shop' %}">Marketplace</a>
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
+                    {% if user.is_authenticated %}
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'user_items' %}">My Items</a>
+                    {% endif %}
+                    {% if user.is_staff or user.is_superuser %}
+                    <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
+                    {% endif %}
+                </nav>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-6">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'profile' %}" class="w-10 h-10 rounded-full bg-primary border-2 border-primary flex items-center justify-center hover:bg-primary-container transition-colors" title="My Account">
+                        <span class="font-display font-bold text-xs text-on-primary leading-none">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}<span class="material-symbols-outlined text-base">person</span>{% endif %}</span>
+                    </a>
+                    <form method="post" action="{% url 'logout' %}" class="hidden sm:inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-sm font-semibold font-body text-primary px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Log out</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'login' %}" class="text-sm font-semibold font-body text-primary px-3 sm:px-4 py-2 rounded-full border border-primary/30 hover:bg-primary hover:text-on-primary transition-all">Sign in</a>
+                    <a href="{% url 'signup' %}" class="hidden sm:inline-flex text-sm font-semibold font-body text-on-primary bg-primary px-4 py-2 rounded-full hover:bg-primary-container transition-colors">Sign up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-24 sm:pt-28 pb-24 md:pb-20 px-4 sm:px-6 md:px-8 max-w-[1440px] mx-auto">
+        <section class="mb-8">
+            <div class="flex items-center gap-4 mb-3">
+                <div class="w-8 h-[1px] bg-outline-variant"></div>
+                <span class="font-display text-xs font-bold tracking-[0.1em] text-on-surface-variant uppercase">Campus Marketplace</span>
+            </div>
+            <h1 class="font-display font-bold text-3xl sm:text-4xl text-primary tracking-tightest">Shop SHARE Bear</h1>
+            <p class="text-on-surface-variant text-sm mt-2 font-body max-w-xl">Gently used items bought back from Baylor students, resold to Baylor students.</p>
+        </section>
+
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-6">
+            <form method="get" class="flex-1 max-w-sm">
+                {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+                    <input type="text" name="q" value="{{ search }}" placeholder="Search items…"
+                        class="w-full rounded-full border border-outline-variant/40 bg-surface-container-lowest pl-10 pr-4 py-2.5 text-sm text-on-surface font-body focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                </div>
+            </form>
+            {% if categories %}
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'shop' %}{% if search %}?q={{ search }}{% endif %}" class="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full border transition-colors {% if not category %}bg-primary text-on-primary border-primary{% else %}text-on-surface-variant border-outline-variant/40 hover:bg-surface-container{% endif %}">All</a>
+                {% for c in categories %}
+                <a href="?category={{ c }}{% if search %}&q={{ search }}{% endif %}" class="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full border transition-colors {% if category == c %}bg-primary text-on-primary border-primary{% else %}text-on-surface-variant border-outline-variant/40 hover:bg-surface-container{% endif %}">{{ c }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if listings %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {% for listing in listings %}
+            <a href="{% url 'shop_listing_detail' listing_id=listing.pk %}" class="group block bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden hover:ambient-shadow transition-shadow">
+                <div class="aspect-square bg-surface-container overflow-hidden">
+                    {% if listing.primary_image_url %}
+                    <img src="{{ listing.primary_image_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-on-surface-variant">
+                        <span class="material-symbols-outlined text-4xl">image</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="p-3 sm:p-4">
+                    {% if listing.quantity <= 0 %}
+                    <span class="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-800 border border-red-200 mb-1.5">Sold out</span>
+                    {% endif %}
+                    <p class="font-body font-semibold text-sm text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-2">{{ listing.title }}</p>
+                    <p class="font-display font-bold text-lg text-primary mt-1 tabular-nums">${{ listing.price }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-20">
+            <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-3 inline-block">inventory_2</span>
+            <p class="font-display font-bold text-lg text-on-surface">Nothing here yet</p>
+            <p class="text-sm text-on-surface-variant font-body mt-1">Check back soon — new items are added as they come through buy-back.</p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+{% if vercel_analytics_enabled %}
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+{% endif %}
+{% endblock %}
