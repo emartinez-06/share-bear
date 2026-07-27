@@ -82,7 +82,7 @@
                                 <div class="relative w-12 h-12">
                                     {% if listing.primary_image_url %}
                                     <div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container border border-outline-variant/20">
-                                        <img src="{{ listing.primary_image_url }}" alt="" class="w-full h-full object-cover">
+                                        <img src="{{ listing.primary_image_url }}" alt="" loading="lazy" decoding="async" class="w-full h-full object-cover">
                                     </div>
                                     {% else %}
                                     <div class="w-12 h-12 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center text-on-surface-variant">

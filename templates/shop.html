@@ -78,7 +78,7 @@
             <a href="{% url 'shop_listing_detail' listing_id=listing.pk %}" class="group block bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden hover:ambient-shadow transition-shadow">
                 <div class="relative aspect-square bg-surface-container overflow-hidden">
                     {% if listing.primary_image_url %}
-                    <img src="{{ listing.primary_image_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    <img src="{{ listing.primary_image_url }}" alt="{{ listing.title }}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-on-surface-variant">
                         <span class="material-symbols-outlined text-4xl">image</span>

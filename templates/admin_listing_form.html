@@ -148,7 +148,7 @@
                 <div class="relative rounded-xl overflow-hidden border border-outline-variant/30 aspect-square bg-surface-container group">
                     {% if image.public_url %}
                     <button type="button" onclick="openLightbox('{{ image.public_url }}')" class="block w-full h-full cursor-zoom-in">
-                        <img src="{{ image.public_url }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ image.public_url }}" alt="" loading="lazy" decoding="async" class="w-full h-full object-cover">
                     </button>
                     {% endif %}
                     {% if image.is_primary %}

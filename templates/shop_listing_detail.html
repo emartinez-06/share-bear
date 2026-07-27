@@ -54,7 +54,7 @@
                 <div class="relative aspect-square bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/20" id="main-image-wrap">
                     {% if images %}
                     <button type="button" onclick="openLightbox(document.getElementById('main-image').src)" class="block w-full h-full cursor-zoom-in">
-                        <img id="main-image" src="{{ images.0.public_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover">
+                        <img id="main-image" src="{{ images.0.public_url }}" alt="{{ listing.title }}" decoding="async" class="w-full h-full object-cover">
                     </button>
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-on-surface-variant">
@@ -70,7 +70,7 @@
                     {% for image in images %}
                     <button type="button" onclick="document.getElementById('main-image').src = '{{ image.public_url }}'"
                         class="aspect-square rounded-lg overflow-hidden border border-outline-variant/30 hover:border-primary transition-colors">
-                        <img src="{{ image.public_url }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ image.public_url }}" alt="" loading="lazy" decoding="async" class="w-full h-full object-cover">
                     </button>
                     {% endfor %}
                 </div>

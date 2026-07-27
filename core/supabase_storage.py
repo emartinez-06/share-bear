@@ -194,3 +194,16 @@ def listing_image_public_url(object_path: str) -> str | None:
     bucket = settings.SUPABASE_LISTING_IMAGES_BUCKET
     enc = _encode_object_path(object_path)
     return f'{base}/storage/v1/object/public/{urllib.parse.quote(bucket)}/{enc}'
+
+
+def download_listing_image(object_path: str) -> bytes | None:
+    """Fetch the raw bytes of an existing listing image, or None on failure."""
+    url = listing_image_public_url(object_path)
+    if not url:
+        return None
+    try:
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            return resp.read()
+    except Exception:
+        logger.exception('Failed to download listing image %s', object_path)
+        return None

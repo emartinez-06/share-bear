@@ -1,5 +1,4 @@
 import logging
-import os
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
@@ -11,9 +10,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+from PIL import UnidentifiedImageError
 
 from .forms import AdminAcceptQuoteForm, AIQuoteForm, BookingLinkForm, ListingForm, QuoteVideoForm, listing_image_upload_error
 from .gemini_quote import build_quote_prompt, format_offers_total, format_share_bear_offer_display, get_quote_from_gemini, parse_offer_amount
+from .image_utils import resize_for_web
 from .models import AIQuote, Listing, ListingImage
 from .supabase_storage import (
     create_presigned_upload_url,
@@ -32,18 +33,10 @@ logger = logging.getLogger(__name__)
 DEV_MOCK_QUOTE_ITEM_NAME = 'Sample item (dev preview)'
 DEV_MOCK_OFFER_DISPLAY = '$127'
 LEGACY_ASSIGNED_ADMIN_PLACEHOLDER = 'Erick'
-_ALLOWED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
 
 
 def _normalized_admin_name(raw_name: str) -> str:
     return (raw_name or '').strip()
-
-
-def _image_extension_for_upload(name: str) -> str:
-    ext = (os.path.splitext(name or '')[1] or '.jpg').lower()
-    if ext not in _ALLOWED_IMAGE_EXTENSIONS:
-        return '.jpg'
-    return ext
 
 
 def _effective_assigned_admin_name(quote_obj: AIQuote) -> str:
@@ -1269,13 +1262,18 @@ def admin_listing_photo_upload_view(request, listing_id: int):
         if err:
             errors.append(err)
             continue
-        ext = _image_extension_for_upload(getattr(f, 'name', '') or '')
+        try:
+            resized_bytes, content_type = resize_for_web(f.read())
+        except UnidentifiedImageError:
+            errors.append(f'{f.name}: not a readable image file.')
+            continue
+        ext = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp'}.get(content_type, '.jpg')
         object_path = f'listing_{listing.pk}/{timezone.now().strftime("%Y%m%d%H%M%S%f")}_{next_sort_order}{ext}'
         try:
             upload_listing_image(
-                file_bytes=f.read(),
+                file_bytes=resized_bytes,
                 object_path=object_path,
-                content_type=f.content_type or 'image/jpeg',
+                content_type=content_type,
             )
         except RuntimeError as e:
             errors.append(f'{f.name}: {e or "upload failed"}')
