@@ -1158,6 +1158,8 @@ def admin_listing_create_view(request):
                 category=form.cleaned_data['category'],
                 condition=form.cleaned_data['condition'],
                 price=form.cleaned_data['price'],
+                msrp=form.cleaned_data['msrp'],
+                msrp_url=form.cleaned_data['msrp_url'],
                 quantity=form.cleaned_data['quantity'],
                 status=form.cleaned_data['status'],
             )
@@ -1201,6 +1203,8 @@ def admin_listing_edit_view(request, listing_id: int):
             listing.category = form.cleaned_data['category']
             listing.condition = form.cleaned_data['condition']
             listing.price = form.cleaned_data['price']
+            listing.msrp = form.cleaned_data['msrp']
+            listing.msrp_url = form.cleaned_data['msrp_url']
             listing.quantity = form.cleaned_data['quantity']
             new_status = form.cleaned_data['status']
             if new_status == Listing.Status.SOLD and listing.status != Listing.Status.SOLD:
@@ -1218,6 +1222,8 @@ def admin_listing_edit_view(request, listing_id: int):
             'category': listing.category,
             'condition': listing.condition,
             'price': listing.price,
+            'msrp': listing.msrp,
+            'msrp_url': listing.msrp_url,
             'quantity': listing.quantity,
             'status': listing.status,
         })

@@ -51,13 +51,18 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12">
             {# ---- Image gallery ---- #}
             <div>
-                <div class="aspect-square bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/20" id="main-image-wrap">
+                <div class="relative aspect-square bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/20" id="main-image-wrap">
                     {% if images %}
-                    <img id="main-image" src="{{ images.0.public_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover">
+                    <button type="button" onclick="openLightbox(document.getElementById('main-image').src)" class="block w-full h-full cursor-zoom-in">
+                        <img id="main-image" src="{{ images.0.public_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover">
+                    </button>
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-on-surface-variant">
                         <span class="material-symbols-outlined text-5xl">image</span>
                     </div>
+                    {% endif %}
+                    {% if listing.percent_off %}
+                    <span class="absolute top-3 right-3 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container shadow">{{ listing.percent_off }}% off</span>
                     {% endif %}
                 </div>
                 {% if images|length > 1 %}
@@ -78,7 +83,23 @@
                 <span class="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 mb-3">{{ listing.category }}</span>
                 {% endif %}
                 <h1 class="font-display font-bold text-2xl sm:text-3xl text-primary tracking-tightest mb-2">{{ listing.title }}</h1>
-                <p class="font-display font-extrabold text-3xl text-on-surface mb-4 tabular-nums">${{ listing.price }}</p>
+
+                {% if listing.percent_off %}
+                <div class="flex items-baseline gap-2 mb-1">
+                    <p class="text-lg text-on-surface-variant line-through tabular-nums">${{ listing.msrp }}</p>
+                    <span class="text-xs font-bold uppercase tracking-wide text-secondary-container bg-primary px-2 py-0.5 rounded-full">Save {{ listing.percent_off }}%</span>
+                </div>
+                <p class="font-display font-extrabold text-3xl text-on-surface mb-1 tabular-nums">Now selling for ${{ listing.price }}</p>
+                {% else %}
+                <p class="font-display font-extrabold text-3xl text-on-surface mb-1 tabular-nums">${{ listing.price }}</p>
+                {% endif %}
+                {% if listing.msrp_url %}
+                <a href="{{ listing.msrp_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-semibold font-body text-primary hover:underline mb-4">
+                    See original retail listing <span class="material-symbols-outlined text-sm">open_in_new</span>
+                </a>
+                {% else %}
+                <div class="mb-4"></div>
+                {% endif %}
 
                 {% if listing.quantity <= 0 %}
                 <div class="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-semibold text-red-800 font-body">Sold out</div>
@@ -99,7 +120,32 @@
             </div>
         </div>
     </main>
+
+    {# ---- Full-image lightbox ---- #}
+    <div id="lightbox" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeLightbox()">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <button type="button" onclick="closeLightbox()" class="absolute top-4 right-4 z-10 text-white hover:opacity-70 transition-opacity">
+            <span class="material-symbols-outlined text-3xl">close</span>
+        </button>
+        <img id="lightbox-img" src="" alt="" class="relative z-0 max-w-full max-h-full rounded-xl object-contain">
+    </div>
 </div>
+
+<script>
+function openLightbox(url) {
+    if (!url) return;
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLightbox();
+});
+</script>
 
 {% if vercel_analytics_enabled %}
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>

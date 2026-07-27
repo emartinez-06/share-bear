@@ -113,11 +113,12 @@ Updated as each increment lands; git history has the full detail, this is just t
 - [x] Homepage hero rewritten to lead with buying: "Buy Dorm Essentials. Sold by Bears." with "Shop the marketplace" as the primary CTA and "Sell your stuff" as secondary (previously the only CTA, "Start a quote"). Fixed a small pre-existing bug where the desktop nav marked "Marketplace" as the active tab on the homepage even though home and shop are now different pages. Mobile bottom nav (in both `index.html` and `base_auth.html`, which duplicate this nav) swapped its second tab from "AI Quote" to "Shop", since mobile nav real estate is scarce and the ask was to make the marketplace prominent - AI Quote is still one tap away via desktop nav / the "Sell your stuff" hero button, just not in the 4 mobile bottom-bar slots anymore.
 - [x] Bulk-created draft listings for all 52 currently picked-up, not-yet-listed buy-back items in production, via a new "List all N as drafts" action on the listings page (`admin_listings_bulk_create_view`). One item ("Coffee table") came through at $0 because its original AI quote never had a parseable offer amount - flagged for Erick to price manually before publishing. Everything else looks correct.
 - [x] Photo upload now accepts multiple files in a single submission (was one file per request) - the admin listings table also got a small photo-count badge (red "!" when a listing has zero photos) so it's easy to track progress while working through a large batch of unlabeled images against many draft listings.
+- [x] `Listing.msrp` / `Listing.msrp_url` added (migration `0011_listing_msrp_listing_msrp_url.py`, applied to production by Erick) plus a `percent_off` model property. Shop cards and the listing detail page now show a "% off" badge, a struck-through MSRP next to the current price, and a "See original retail listing" link when `msrp_url` is set. Editable from the admin listing form alongside price. Verified end-to-end on a real listing (MacBook Pro), then reverted back to its original state.
+- [x] Click-to-enlarge image lightbox added on both the listing detail page (main image + thumbnails) and the admin edit page's photo gallery - useful while reviewing uploads, not just for shoppers.
 - [ ] Cart (DB-backed, per user) - not started.
 - [ ] Checkout (pickup vs delivery, manual "pay at pickup/delivery") - not started.
 - [ ] `Order` model + buyer-facing "My Orders" page - not started.
 - [ ] Admin order fulfillment board - not started.
-- [ ] Homepage dual-CTA update ("Sell your stuff" + "Shop the marketplace") - not started.
 
 ### Phase 2 - Stripe integration
 - [ ] Not started.

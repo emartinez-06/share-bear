@@ -76,7 +76,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {% for listing in listings %}
             <a href="{% url 'shop_listing_detail' listing_id=listing.pk %}" class="group block bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden hover:ambient-shadow transition-shadow">
-                <div class="aspect-square bg-surface-container overflow-hidden">
+                <div class="relative aspect-square bg-surface-container overflow-hidden">
                     {% if listing.primary_image_url %}
                     <img src="{{ listing.primary_image_url }}" alt="{{ listing.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                     {% else %}
@@ -84,13 +84,21 @@
                         <span class="material-symbols-outlined text-4xl">image</span>
                     </div>
                     {% endif %}
+                    {% if listing.percent_off %}
+                    <span class="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-secondary-container text-on-secondary-container shadow">{{ listing.percent_off }}% off</span>
+                    {% endif %}
                 </div>
                 <div class="p-3 sm:p-4">
                     {% if listing.quantity <= 0 %}
                     <span class="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-800 border border-red-200 mb-1.5">Sold out</span>
                     {% endif %}
                     <p class="font-body font-semibold text-sm text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-2">{{ listing.title }}</p>
-                    <p class="font-display font-bold text-lg text-primary mt-1 tabular-nums">${{ listing.price }}</p>
+                    <div class="flex items-baseline gap-1.5 mt-1">
+                        <p class="font-display font-bold text-lg text-primary tabular-nums">${{ listing.price }}</p>
+                        {% if listing.percent_off %}
+                        <p class="text-xs text-on-surface-variant line-through tabular-nums">${{ listing.msrp }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </a>
             {% endfor %}

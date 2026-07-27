@@ -143,6 +143,14 @@ class Listing(models.Model):
     condition = models.CharField(
         max_length=16, choices=Condition.choices, blank=True)
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    msrp = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text='Original retail price, for showing a percent-off discount. Leave blank if unknown.',
+    )
+    msrp_url = models.URLField(
+        max_length=1024, blank=True,
+        help_text='Link to where the MSRP was sourced (e.g. the product\'s retail page), shown to buyers.',
+    )
     quantity = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=16,
@@ -158,6 +166,12 @@ class Listing(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def percent_off(self) -> int | None:
+        if not self.msrp or self.msrp <= self.price:
+            return None
+        return round((self.msrp - self.price) / self.msrp * 100)
 
 
 class ListingImage(models.Model):

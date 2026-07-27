@@ -189,5 +189,10 @@ class ListingForm(forms.Form):
     condition = forms.ChoiceField(
         choices=[('', '—')] + Listing.Condition.choices, required=False)
     price = forms.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal('0'))
+    msrp = forms.DecimalField(
+        max_digits=8, decimal_places=2, min_value=Decimal('0'), required=False,
+        label='Original retail price (MSRP)',
+    )
+    msrp_url = forms.URLField(max_length=1024, required=False, label='Original item link')
     quantity = forms.IntegerField(min_value=1, initial=1)
     status = forms.ChoiceField(choices=Listing.Status.choices)
