@@ -100,7 +100,7 @@ Updated as each increment lands; git history has the full detail, this is just t
 - [x] `Listing` / `ListingImage` models + migration (`core/migrations/0010_listing_listingimage.py`). Migration generated; applying to production was handed to Erick to run directly (`python3 manage.py migrate core 0010`) since Claude Code's own safety classifier blocks schema-changing Bash commands here.
 - [x] Basic Django-admin registration (`/admin/`) for `Listing`/`ListingImage`, for visibility while the custom admin UI is pending.
 - [x] `core/supabase_storage.py` generalized (bucket-parameterized internals) + `upload_listing_image` / `listing_image_public_url` added. Existing quote-video call sites untouched. Uses a server-side multipart upload (not presigned direct-to-client like video) since admin-uploaded listing photos are small and don't need to bypass Vercel's function payload path.
-- [ ] `listing-images` Supabase bucket itself still needs to be created in production (public, unlike the private `quote-videos` bucket) - not yet done, pending a decision on who creates it.
+- [x] `listing-images` Supabase bucket created in production (public, unlike the private `quote-videos` bucket; 10 MB file size limit; JPEG/PNG/WebP only). Created via the Supabase MCP with Erick's go-ahead; `get_advisors` showed no new security findings afterward.
 - [ ] Admin: create a listing from a picked-up quote, upload photos, set price/condition, publish/unpublish.
 - [ ] Admin: listings management view (filter-sidebar/grid-list pattern).
 
