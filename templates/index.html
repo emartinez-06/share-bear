@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>SHARE Bear | Direct Student Buy-Back</title>
+    <title>SHARE Bear | Buy & Sell Dorm Essentials</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -117,7 +117,7 @@
                     </a>
                     <a href="{% url 'ai_quote' %}" class="md:hidden text-sm font-bold text-primary whitespace-nowrap">AI Quote</a>
                     <nav class="hidden md:flex gap-6 font-body text-sm tracking-tight">
-                        <a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors duration-300" href="{% url 'shop' %}">Marketplace</a>
+                        <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'shop' %}">Marketplace</a>
                         <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'ai_quote' %}">AI Quote</a>
                         {% if user.is_staff or user.is_superuser %}
                         <a class="text-on-surface-variant hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/40 pb-1 transition-colors duration-300" href="{% url 'admin_kanban' %}">Admin Panel</a>
@@ -164,25 +164,23 @@
                     </div>
 
                     <h1 class="font-display text-4xl sm:text-6xl lg:text-[5.2rem] leading-[1.05] tracking-tightest text-primary font-bold mb-8">
-                        <span class="block">The Future of</span>
-                        <span class="block">Campus Reuse</span>
-                        <span class="block italic font-light">Is Live Now.</span>
+                        <span class="block">Buy Dorm</span>
+                        <span class="block">Essentials.</span>
+                        <span class="block italic font-light">Sold by Bears.</span>
                     </h1>
 
                     <p class="font-body text-lg sm:text-xl text-on-surface-variant leading-relaxed max-w-2xl mb-10">
-                        The waitlist chapter is over. SHARE Bear is now fully live for Baylor students:
-                        get AI-powered offers, upload item proof, and complete pickup with a real, working buy-back flow.
+                        Furniture, appliances, and more - bought back from Baylor students and resold at a fraction of retail.
+                        Got stuff to get rid of instead? Get an AI-powered offer and we'll pick it up.
                     </p>
 
                     <div class="flex flex-wrap gap-3">
-                        <a href="{% url 'ai_quote' %}" class="inline-flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-xl font-bold hover:bg-primary-container transition-colors">
-                            Start a quote <span class="material-symbols-outlined text-base">arrow_forward</span>
+                        <a href="{% url 'shop' %}" class="inline-flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-xl font-bold hover:bg-primary-container transition-colors">
+                            Shop the marketplace <span class="material-symbols-outlined text-base">arrow_forward</span>
                         </a>
-                        {% if user.is_authenticated %}
-                        <a href="{% url 'user_items' %}" class="inline-flex items-center gap-2 border border-primary/30 text-primary px-6 py-3 rounded-xl font-semibold hover:bg-primary/5 transition-colors">
-                            View my items
+                        <a href="{% url 'ai_quote' %}" class="inline-flex items-center gap-2 border border-primary/30 text-primary px-6 py-3 rounded-xl font-semibold hover:bg-primary/5 transition-colors">
+                            Sell your stuff
                         </a>
-                        {% endif %}
                     </div>
                 </div>
             </section>
@@ -190,10 +188,10 @@
             <section class="py-8 sm:py-12 bg-surface-container-low rounded-[2rem] p-6 sm:p-10 mb-16">
                 <div class="max-w-3xl mx-auto bg-surface-container-lowest rounded-[1.5rem] p-6 sm:p-10 ambient-shadow">
                     <div class="text-center mb-8">
-                        <span class="font-display text-[0.65rem] font-bold tracking-[0.2em] text-on-surface-variant uppercase mb-4 block">Now Operating</span>
-                        <h2 class="font-display text-3xl sm:text-4xl font-bold text-primary mb-3">From Waitlist to Working Product</h2>
+                        <span class="font-display text-[0.65rem] font-bold tracking-[0.2em] text-on-surface-variant uppercase mb-4 block">Selling? Here's How It Works</span>
+                        <h2 class="font-display text-3xl sm:text-4xl font-bold text-primary mb-3">From Your Room to the Marketplace</h2>
                         <p class="font-body text-on-surface-variant italic">
-                            Same mission, now with full execution for Baylor buy-back.
+                            Every item for sale started as someone else's buy-back.
                         </p>
                     </div>
 
@@ -262,9 +260,9 @@
                 <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">home</span>
                 <span class="text-[10px] font-semibold leading-none" style="font-family:'Plus Jakarta Sans',sans-serif">Home</span>
             </a>
-            <a href="{% url 'ai_quote' %}" data-nav="ai_quote" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
-                <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">request_quote</span>
-                <span class="text-[10px] font-semibold leading-none" style="font-family:'Plus Jakarta Sans',sans-serif">AI Quote</span>
+            <a href="{% url 'shop' %}" data-nav="shop" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
+                <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">storefront</span>
+                <span class="text-[10px] font-semibold leading-none" style="font-family:'Plus Jakarta Sans',sans-serif">Shop</span>
             </a>
             {% if user.is_authenticated %}
             <a href="{% url 'user_items' %}" data-nav="user_items" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
@@ -292,6 +290,7 @@
         var path = window.location.pathname;
         var active = null;
         if (path === '/') active = 'home';
+        else if (path.startsWith('/shop/')) active = 'shop';
         else if (path.startsWith('/ai-quote/')) active = 'ai_quote';
         else if (path.startsWith('/accounts/items')) active = 'user_items';
         else if (path.startsWith('/accounts/profile')) active = 'profile';

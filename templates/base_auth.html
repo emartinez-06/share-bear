@@ -101,9 +101,9 @@
             <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">home</span>
             <span class="text-[10px] font-semibold font-body leading-none">Home</span>
         </a>
-        <a href="{% url 'ai_quote' %}" data-nav="ai_quote" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
-            <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">request_quote</span>
-            <span class="text-[10px] font-semibold font-body leading-none">AI Quote</span>
+        <a href="{% url 'shop' %}" data-nav="shop" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
+            <span class="material-symbols-outlined mobile-nav-icon" style="font-size:22px;line-height:1">storefront</span>
+            <span class="text-[10px] font-semibold font-body leading-none">Shop</span>
         </a>
         {% if user.is_authenticated %}
         <a href="{% url 'user_items' %}" data-nav="user_items" class="mobile-nav-tab flex-1 flex flex-col items-center justify-center gap-0.5 text-on-surface-variant">
@@ -131,6 +131,7 @@
     var path = window.location.pathname;
     var active = null;
     if (path === '/') active = 'home';
+    else if (path.startsWith('/shop/')) active = 'shop';
     else if (path.startsWith('/ai-quote/')) active = 'ai_quote';
     else if (path.startsWith('/accounts/items')) active = 'user_items';
     else if (path.startsWith('/accounts/profile')) active = 'profile';
